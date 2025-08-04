@@ -1,9 +1,10 @@
 import z from "zod";
 import { BannerPosEnum } from "./enums";
+import { base64FileInput } from "./product";
 
 export const createBannerSchema = z.object({
   title: z.string().optional(),
-  imageUrl: z.string().url(),
+  image: z.array(base64FileInput),
   linkUrl: z.string().url().optional(),
   position: BannerPosEnum.default("HERO"),
   order: z.number().int().nonnegative().default(0),
