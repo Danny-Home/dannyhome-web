@@ -1,5 +1,5 @@
-import { BarGraph } from '@/app/admin/overview/_components/bar-graph';
-import { delay } from '@/constants/mock-api';
+import { BarGraph } from "@/app/(admin-group)/admin/overview/_components/bar-graph";
+import { delay } from "@/constants/mock-api";
 // import { BarGraph } from '@/features/overview/components/bar-graph';
 
 export default async function BarStats() {

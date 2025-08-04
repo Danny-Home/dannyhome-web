@@ -1,12 +1,12 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
-import { Spinner } from "@/components/ui/spinner"
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -20,7 +20,14 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        "ghost-soft":
+          "hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/10",
         link: "text-primary underline-offset-4 hover:underline",
+        soft: "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30",
+        "soft-secondary":
+          "bg-secondary/10 text-secondary hover:bg-secondary/20 dark:bg-secondary/20 dark:hover:bg-secondary/30",
+        subtle:
+          "bg-muted text-foreground hover:bg-muted/80 dark:bg-muted/20 dark:hover:bg-muted/30",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -33,8 +40,8 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
-)
+  },
+);
 
 function Button({
   className,
@@ -42,7 +49,7 @@ function Button({
   size,
   asChild = false,
   isLoading = false,
-  loadingText = '',
+  loadingText = "",
   children,
   ...props
 }: React.ComponentProps<"button"> &
@@ -55,12 +62,14 @@ function Button({
 
   const childrenState = isLoading ? (
     // <div className="flex">
-      <>
-        <Spinner size={'small'}  />
+    <>
+      <Spinner size={"small"} />
       {loadingText}
-      </>
+    </>
+  ) : (
     // </div>
-  ) : children
+    children
+  );
 
   return (
     <Comp
@@ -71,7 +80,7 @@ function Button({
     >
       {childrenState}
     </Comp>
-  )
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };

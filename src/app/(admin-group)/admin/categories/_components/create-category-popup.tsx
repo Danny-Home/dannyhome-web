@@ -1,6 +1,6 @@
 "use client";
 
-import CategoryForm from "@/app/admin/categories/_components/category-form";
+import CategoryForm from "@/app/(admin-group)/admin/categories/_components/category-form";
 import PopoverForm from "@/components/ui/popover-form";
 import React, { useState } from "react";
 

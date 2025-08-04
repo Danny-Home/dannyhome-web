@@ -30,7 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import CreateCategoryPopup from "@/app/admin/categories/_components/create-category-popup";
+import CreateCategoryPopup from "@/app/(admin-group)/admin/categories/_components/create-category-popup";
 
 type Props = {
   value: string;
@@ -98,13 +98,15 @@ const CategoryComboxBoxWithAdd = ({ value, onValueChange }: Props) => {
                         }}
                       >
                         {category.name}
-                        <Tooltip  >
+                        <Tooltip>
                           <TooltipTrigger asChild>
                             <Badge variant="outline">
                               {category._count.subcategories}
                             </Badge>
                           </TooltipTrigger>
-                          <TooltipContent className="">Sub-categories</TooltipContent>
+                          <TooltipContent className="">
+                            Sub-categories
+                          </TooltipContent>
                         </Tooltip>
                         {value === category.id && (
                           <CheckIcon size={16} className="ml-auto" />

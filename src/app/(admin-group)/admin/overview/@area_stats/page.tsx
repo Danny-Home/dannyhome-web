@@ -1,5 +1,5 @@
-import { AreaGraph } from '@/app/admin/overview/_components/area-graph';
-import { delay } from '@/constants/mock-api';
+import { AreaGraph } from "@/app/(admin-group)/admin/overview/_components/area-graph";
+import { delay } from "@/constants/mock-api";
 // import { AreaGraph } from '@/features/overview/components/area-graph';
 
 export default async function AreaStats() {
