@@ -1,5 +1,5 @@
+import HeroBannerCarousel from "@/app/_components/hero-banner-carousel";
 import { HydrateClient } from "@/trpc/server";
-import HeroBannerCarousel from "./_components/hero-banner-carousel";
 
 export default async function Home() {
   return (

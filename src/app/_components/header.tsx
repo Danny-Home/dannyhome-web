@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { HydrateClient } from "@/trpc/server";
 import {
   IconHeart,
+  IconLayoutDashboard,
   IconSearch,
   IconShoppingCart,
   IconUser,
@@ -9,8 +10,14 @@ import {
 import Image from "next/image";
 import React from "react";
 import HeaderCategoryList from "./header-category-list";
+import { auth } from "@/server/auth";
+import Link from "next/link";
 
-const Header = () => {
+const Header = async () => {
+  const session = await auth();
+
+  const isAdmin = session?.user && session.user.role === 'ADMIN';
+
   return (
     <HydrateClient>
       <header className="top-0 right-0 left-0 z-20 flex flex-col items-center space-y-3 py-0">
@@ -36,6 +43,14 @@ const Header = () => {
               <Button variant="ghost" size="icon">
                 <IconShoppingCart />
               </Button>
+              {isAdmin && (
+                <Button variant='soft' asChild className="ml-4">
+                <Link href="/admin">
+                <IconLayoutDashboard />
+                  Dashboard
+                </Link>
+              </Button>
+              )}
             </div>
           </div>
         </div>

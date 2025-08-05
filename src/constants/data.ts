@@ -57,6 +57,19 @@ export const navItems: NavItem[] = [
     shortcut: ['k', 'k'],
     isActive: false,
     items: [] // No child items,
+  },
+  {
+    title: 'Content',
+    url: '#',
+    icon: 'content',
+    isActive: true,
+    items: [
+      {
+        title: 'Banners',
+        url: '/admin/banners',
+        icon: 'banner'
+      }
+    ]
   }
 ];
 

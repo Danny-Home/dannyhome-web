@@ -5,8 +5,9 @@ import { cookies } from "next/headers";
 import { auth } from "@/server/auth";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
-import AppSidebar from "./_components/app-sidebar";
-import Header from "./_components/header";
+import AppSidebar from "@/app/(admin-group)/admin/_components/app-sidebar";
+import Header from "@/app/(admin-group)/admin/_components/header";
+
 
 export const metadata: Metadata = {
   title: "Danny Home - Admin",
@@ -37,9 +38,7 @@ export default async function AdminLayout({
         <AppSidebar />
         <SidebarInset>
           <Header />
-          {/* page main content */}
           {children}
-          {/* page main content ends */}
         </SidebarInset>
       </SidebarProvider>
     </KBar>

@@ -5,6 +5,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import SearchInput from "@/components/search-input";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { IconBrowser } from "@tabler/icons-react";
 
 export default function Header() {
   return (
@@ -16,6 +19,12 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4 px-4">
+        <Button variant='soft' asChild>
+          <Link href="/" target="_blank">
+          <IconBrowser />
+            View Site
+          </Link>
+        </Button>
         <div className="hidden md:flex">
           <SearchInput />
         </div>

@@ -80,7 +80,7 @@ export default async function RootLayout({
               >
                 <Providers activeThemeValue={activeThemeValue!}>
                   <Toaster />
-                  <Header />
+
                   {children}
                 </Providers>
               </ThemeProvider>
