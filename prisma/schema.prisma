@@ -72,8 +72,7 @@ enum PromoType {
 
 enum BannerPos {
   HERO
-  SIDEBAR
-  FOOTER
+  PROMO
 }
 
 enum CartStatus {

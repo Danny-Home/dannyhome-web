@@ -12,7 +12,7 @@ export type DiscountType = "FIXED" | "PERCENT";
 
 export type PromoType = "COUPON" | "AUTOMATIC";
 
-export type BannerPos = "HERO" | "SIDEBAR" | "FOOTER";
+export type BannerPos = "HERO" | "PROMO";
 
 export type CartStatus = "ACTIVE" | "ABANDONED" | "CONVERTED";
 
