@@ -1,31 +1,37 @@
-import { searchParamsCache } from "@/lib/searchparams";
-import { trpc } from "@/trpc/server";
+'use client'
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Banner } from "prisma/interfaces";
+import { HoverEffect } from "@/components/ui/card-hover-effect";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import Image from "next/image";
+import { buildViewableUrl } from "@/lib/utils";
+import type { Base64FileInput } from "@/lib/schemas/storage";
 
-async function BannerListing() {
-  //   const page = searchParamsCache.get("page");
-  //   const search = searchParamsCache.get("name");
-  //   const pageLimit = searchParamsCache.get("perPage");
-  //   const active = searchParamsCache.get("active");
+type Props = {
+  banners: Banner[];
+}
 
-  //   const filters = {
-  //     page,
-  //     limit: pageLimit,
-  //     ...(search && { search }),
-  //     ...(active && { active }),
-  //   };
-
-  const banners = await trpc.banner.list();
-  //   const bannerListSize = banners.length;
-
+ function BannerListing({ banners }: Props) {
   return (
     <Tabs defaultValue="full-banner">
       <TabsList className="h-10">
         <TabsTrigger value="full-banner">Full Slides</TabsTrigger>
         <TabsTrigger value="promos">Promos</TabsTrigger>
       </TabsList>
-      <TabsContent value="full-banner">Banners</TabsContent>
+      <TabsContent value="full-banner">
+          <HoverEffect  items={banners} Content={(banner) => (
+            <Card key={banner.id}>
+              <CardHeader>
+                hello
+              </CardHeader>
+              <CardContent>
+                <Image width={200} height={200} src={buildViewableUrl((JSON.parse(banner.attachment! as string) as Base64FileInput), {useBlob: false})} alt="hello" className="w-full h-[300px] object-cover mx-auto" />
+              </CardContent>
+            </Card>
+          )} />
+      </TabsContent>
       <TabsContent value="promos">Promotions</TabsContent>
     </Tabs>
   );

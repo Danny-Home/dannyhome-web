@@ -4,6 +4,7 @@ import {
   parseAsBoolean,
   parseAsInteger,
   parseAsString,
+  parseAsStringEnum,
 } from "nuqs/server";
 
 export const searchParams = {
@@ -13,6 +14,7 @@ export const searchParams = {
   gender: parseAsString,
   category: parseAsString,
   active: parseAsBoolean,
+  type: parseAsStringEnum(['HERO', 'PROMO']).withDefault('HERO')
   // advanced filter
   // filters: getFiltersStateParser().withDefault([]),
   // joinOperator: parseAsStringEnum(['and', 'or']).withDefault('and')

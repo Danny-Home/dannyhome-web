@@ -3,8 +3,9 @@ import { adminProcedure, createTRPCRouter, publicProcedure } from "../trpc";
 import { storageService } from "@/server/services/storage.service";
 
 import { TRPCError } from "@trpc/server";
-import type { Base64FileInput } from "@/lib/schemas/storage";
+import type { Base64FileInput, UploadedFileMeta } from "@/lib/schemas/storage";
 import type { PrismaClient } from "@prisma/client";
+import z from "zod";
 
 async function maybeUpload(
   db: PrismaClient,
@@ -17,11 +18,13 @@ async function maybeUpload(
 }
 
 export const bannersRouter = createTRPCRouter({
-  list: adminProcedure.query(async ({ ctx }) => {
+  list: adminProcedure
+  .input(z.object({ type: z.enum(['HERO', 'PROMO']).optional() }))
+  .query(async ({ ctx, input }) => {
     return await ctx.db.banner.findMany({
-      include: {
-        attachment: true,
-      },
+      where: {
+        position: input.type
+      }
     });
   }),
   listActive: publicProcedure.query(async ({ ctx }) => {
@@ -43,29 +46,18 @@ export const bannersRouter = createTRPCRouter({
   createBanner: adminProcedure
     .input(createBannerSchema)
     .mutation(async ({ ctx, input }) => {
-      // const attachment = await storageService.upload(ctx.db, input.image);
       if (!input.image)
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Image is missing...",
         });
 
-      const attachment = await storageService.upload(ctx.db, input.image, "");
-
-      if (!attachment[0])
-        throw new TRPCError({
-          code: "UNPROCESSABLE_CONTENT",
-          message: "Failed to load image",
-        });
+      const { image, ...values} = input;
 
       return await ctx.db.banner.create({
         data: {
-          ...input,
-          attachment: {
-            connect: {
-              id: attachment[0].id,
-            },
-          },
+          ...values,
+          attachment: JSON.stringify(image[0])
         },
       });
     }),

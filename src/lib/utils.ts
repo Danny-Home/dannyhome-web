@@ -66,8 +66,10 @@ type StoredFile = {
 };
 
 export function buildViewableUrl(
-  file: StoredFile,
-  opts: { useBlob?: boolean } = {},
+  file: Base64FileInput,
+  opts: { useBlob?: boolean } = {
+    useBlob: true
+  },
 ): string {
   // 1) convert base64 → binary string → Uint8Array
   const binary = atob(file.data);

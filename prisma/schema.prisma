@@ -111,7 +111,6 @@ model Attachment {
 
   /* -------- consumers -------- */
   products      Product[]      @relation("ProductAttachments")
-  banners       Banner[]       @relation("BannerImage")
   categories    Category[]     @relation("CategoryImage")
   subCategories SubCategory[]  @relation("SubCategoryImage")  // new camel-case relation name
 
@@ -345,9 +344,7 @@ model Banner {
   endsAt        DateTime?
   active        Boolean   @default(true)
 
-  // Image stored as attachment
-  attachmentId String?
-  attachment   Attachment? @relation("BannerImage", fields: [attachmentId], references: [id])
+  attachment   Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import BannerListing from "./_components/banner-listing";
-import { HydrateClient } from "@/trpc/server";
+import { HydrateClient, trpc } from "@/trpc/server";
 import PageContainer from "../../_components/page-container";
 import { Heading } from "@/components/ui/heading";
 import Link from "next/link";
@@ -10,8 +10,32 @@ import { IconAppWindow, IconLiveView, IconPlus } from "@tabler/icons-react";
 import { Separator } from "@/components/ui/separator";
 import { DataTableSkeleton } from "@/components/ui/table/data-table-skeleton";
 import BannerForm from "./_components/banner-form";
+import { searchParamsCache } from "@/lib/searchparams";
 
-function BannersPage() {
+type Props = {
+  params: Promise<{
+    type?: 'HERO' | 'PROMO'
+  }>
+}
+
+async function BannersPage({ params }: Props) {
+  const { type } = await params;
+  //   const page = searchParamsCache.get("page");
+  //   const search = searchParamsCache.get("name");
+  //   const pageLimit = searchParamsCache.get("perPage");
+  //   const active = searchParamsCache.get("active");
+
+  //   const filters = {
+  //     page,
+  //     limit: pageLimit,
+  //     ...(search && { search }),
+  //     ...(active && { active }),
+  //   };
+
+  const banners = await trpc.banner.list({
+    type,
+  });
+
   return (
     <HydrateClient>
       <PageContainer scrollable>
@@ -33,7 +57,7 @@ function BannersPage() {
               <DataTableSkeleton columnCount={5} rowCount={8} filterCount={2} />
             }
           >
-            <BannerListing />
+            <BannerListing banners={banners} />
           </Suspense>
         </div>
       </PageContainer>

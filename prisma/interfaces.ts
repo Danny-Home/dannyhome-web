@@ -27,7 +27,6 @@ export interface Attachment {
   uploaderId: string | null;
   uploader?: User | null;
   products?: Product[];
-  banners?: Banner[];
   categories?: Category[];
   subCategories?: SubCategory[];
   createdAt: Date;
@@ -201,8 +200,7 @@ export interface Banner {
   startsAt: Date | null;
   endsAt: Date | null;
   active: boolean;
-  attachmentId: string | null;
-  attachment?: Attachment | null;
+  attachment: JsonValue;
   createdAt: Date;
   updatedAt: Date;
 }
