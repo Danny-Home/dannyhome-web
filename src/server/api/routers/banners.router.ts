@@ -43,9 +43,16 @@ export const bannersRouter = createTRPCRouter({
   createBanner: adminProcedure
     .input(createBannerSchema)
     .mutation(async ({ ctx, input }) => {
-      const attachment = await storageService.upload(ctx.db, input.image);
+      // const attachment = await storageService.upload(ctx.db, input.image);
+      if (!input.image)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Image is missing...",
+        });
 
-      if (!attachment?.[0])
+      const attachment = await storageService.upload(ctx.db, input.image, "");
+
+      if (!attachment[0])
         throw new TRPCError({
           code: "UNPROCESSABLE_CONTENT",
           message: "Failed to load image",

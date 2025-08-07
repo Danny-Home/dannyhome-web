@@ -34,9 +34,10 @@ import {
 import { api } from "@/trpc/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { IconPlus } from "@tabler/icons-react";
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button as AriaButton } from "react-aria-components";
+import { toast } from "sonner";
 
 type Props = {
   id?: string;
@@ -44,6 +45,8 @@ type Props = {
 
 function BannerForm({}: Props) {
   const apiUtils = api.useUtils();
+  const [open, setOpen] = useState(false);
+
   const form = useForm({
     resolver: zodResolver(createBannerSchema),
     defaultValues: {
@@ -55,8 +58,26 @@ function BannerForm({}: Props) {
     },
   });
 
+  const createBanner = api.banner.createBanner.useMutation();
+
+  const onSubmit = async (values: TCreateBannerSchema) => {
+    console.log(values);
+    createBanner.mutate(values, {
+      async onSuccess() {
+        toast.success("Banner Created");
+        setOpen(false);
+
+        await apiUtils.banner.list.invalidate();
+      },
+      onError(err) {
+        console.error(err.message);
+        toast.error(err.message);
+      },
+    });
+  };
+
   return (
-    <Drawer direction="right" dismissible>
+    <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <Button>
           <IconPlus />
@@ -70,7 +91,10 @@ function BannerForm({}: Props) {
         </DrawerHeader>
         <div className="h-full px-4 py-6">
           <Form {...form}>
-            <form className="flex h-full flex-col space-y-4">
+            <form
+              className="flex h-full flex-col space-y-4"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
               <FormField
                 control={form.control}
                 name="image"
@@ -165,7 +189,13 @@ function BannerForm({}: Props) {
               />
 
               <div className="mt-auto w-full">
-                <Button variant="default" className="w-full">
+                <Button
+                  isLoading={createBanner.isPending}
+                  loadingText="Saving..."
+                  type="submit"
+                  variant="default"
+                  className="w-full"
+                >
                   Save
                 </Button>
               </div>
