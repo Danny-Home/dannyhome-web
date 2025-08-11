@@ -1,192 +1,51 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import "server-only";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { TPaginationFilter } from "@/lib/schemas/filters";
+import type { PrismaClient } from "@prisma/client";
+import { STORAGE_KEYS } from "./storage.service";
 
-import { buildCrudService } from "@/server/services/base.service";
-import { db } from "@/server/db";
-import {
-  storageService,
-} from "@/server/services/storage.service";
-import type {
-  TCreateCategorySchema,
-  TCreateSubCategorySchema,
-  TUpdateCategorySchema,
-  TUpdateSubCategorySchema,
-} from "@/lib/schemas/category";
-import type { Category, SubCategory } from "prisma/interfaces";
-import type { Prisma } from "@prisma/client";
-import type { Base64FileInput } from "@/lib/schemas/storage";
+export async function listCategories(
+  prisma: PrismaClient,
+  { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
+) {
+  const categories = await prisma.category.findMany({
+    skip: (page - 1) * perPage,
+    take: perPage,
+  });
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
-/* ------------------------------------------------------------------ */
-const clean = <T extends Record<string, unknown>>(o: T) =>
-  Object.fromEntries(
-    Object.entries(o).filter(([, v]) => v !== undefined),
-  ) as Partial<T>;
+  const categoryIds = categories.map((c) => c.id);
 
-async function maybeUpload(file?: Base64FileInput, uploaderId?: string) {
-  if (!file) return undefined;
-  const [uploaded] = await storageService.upload(db, [file], uploaderId ?? "");
-  return uploaded?.id; // <-- use row id
+  if (categoryIds.length === 0) {
+    return { products: [], total: 0, page, perPage };
+  }
+
+  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType: STORAGE_KEYS.PRODUCT,
+      entityId: { in: categoryIds },
+    },
+    include: {
+      attachment: true,
+    },
+  });
+
+  const categoryMap = new Map<string, any>(
+    categories.map((c) => [c.id, { ...c, attachments: [] }]),
+  );
+
+  for (const link of attachmentLinks) {
+    const category = categoryMap.get(link.entityId);
+    if (category) {
+      category.attachments.push(link.attachment);
+    }
+  }
+
+  const total = await prisma.category.count();
+
+  return {
+    categories: Array.from(categoryMap.values()),
+    total,
+    page,
+    perPage,
+  };
 }
-
-/* ------------------------------------------------------------------ */
-/*  CategoryService (top-level)                                       */
-/* ------------------------------------------------------------------ */
-export const CategoryService = {
-  ...buildCrudService<TCreateCategorySchema>("category"),
-
-  async create(
-    data: TCreateCategorySchema,
-    uploaderId?: string,
-  ): Promise<Category> {
-    const { image, name, slug, description } = data;
-    const attachmentId = await maybeUpload(image[0], uploaderId);
-
-    const prismaData: Prisma.CategoryCreateInput = {
-      name,
-      slug,
-      description,
-      attachments: {
-        connect: {
-          id: attachmentId
-        }
-      }
-      // attachments: attachmentId ? { connect: { id: attachmentId } } : undefined,
-    };
-
-    return db.category.create({
-      data: prismaData,
-      include: { subcategories: true },
-    });
-  },
-
-  async update(
-    id: string,
-    data: TUpdateCategorySchema & {
-      imageFile?: Base64FileInput;
-      removeImage?: boolean;
-    },
-    uploaderId?: string,
-  ): Promise<Category> {
-    const { imageFile, removeImage, ...fields } = data;
-    const newId = await maybeUpload(imageFile, uploaderId);
-
-    if (removeImage) {
-      const existing = await db.category.findUnique({
-        where: { id },
-        select: { attachments: { select: { id: true } } },
-      });
-      if (existing?.attachments?.id)
-        await storageService.remove(db, existing.attachments.id);
-    }
-
-    const prismaData: Prisma.CategoryUpdateInput = {
-      ...clean(fields),
-      attachments: removeImage
-        ? { disconnect: true }
-        : newId
-          ? { connect: { id: newId } }
-          : undefined,
-    };
-
-    return db.category.update({
-      where: { id },
-      data: prismaData,
-      include: { subcategories: true },
-    });
-  },
-
-  /* For mega-menu */
-  listWithSubcategories(): Promise<
-    (Category & { subcategories: SubCategory[] })[]
-  > {
-    return db.category.findMany({
-      orderBy: { name: "asc" },
-      include: { subcategories: { orderBy: { name: "asc" } } },
-    });
-  },
-};
-
-export const SubCategoryService = {
-  ...buildCrudService<TCreateSubCategorySchema>("subCategory"),
-
-  async create(
-    data: {
-      name: string;
-      slug: string;
-      categoryId: string;
-      description?: string | null;
-      metaTitle?: string | null;
-      metaDescription?: string | null;
-      imageFile?: Base64FileInput;
-    },
-    uploaderId?: string,
-  ): Promise<SubCategory> {
-    const { imageFile, categoryId, name, slug, ...fields } = data;
-    const attachmentId = await maybeUpload(imageFile, uploaderId);
-
-    return db.subCategory.create({
-      data: {
-        name,
-        slug,
-        ...clean(fields),
-        category: { connect: { id: categoryId } },
-        attachments: attachmentId
-          ? { connect: { id: attachmentId } }
-          : undefined,
-      },
-    });
-  },
-
-  async update(
-    id: string,
-    data: {
-      name?: string;
-      slug?: string;
-      description?: string | null;
-      metaTitle?: string | null;
-      metaDescription?: string | null;
-      imageFile?: Base64FileInput;
-      removeImage?: boolean;
-      categoryId?: string;
-    },
-    uploaderId?: string,
-  ): Promise<SubCategory> {
-    const { imageFile, removeImage, categoryId, ...fields } = data;
-    const newId = await maybeUpload(imageFile, uploaderId);
-
-    if (removeImage) {
-      const existing = await db.subCategory.findUnique({
-        where: { id },
-        select: { attachments: { select: { id: true } } },
-      });
-      if (existing?.attachments?.id)
-        await storageService.remove(db, existing.attachments.id);
-    }
-
-    return db.subCategory.update({
-      where: { id },
-      data: {
-        ...clean(fields),
-        category:
-          categoryId !== undefined
-            ? { connect: { id: categoryId } }
-            : undefined,
-        attachments: removeImage
-          ? { disconnect: true }
-          : newId
-            ? { connect: { id: newId } }
-            : undefined,
-      },
-    });
-  },
-
-  listByCategory(categoryId: string): Promise<SubCategory[]> {
-    return db.subCategory.findMany({
-      where: { categoryId },
-      orderBy: { name: "asc" },
-    });
-  },
-};

@@ -1,17 +1,3 @@
-// Danny Home – Admin Backend 𝘃2.2 (final)
-// ──────────────────────────────────────────
-// Complete, validated Prisma schema – all models & relations.
-// Run after saving:  npx prisma validate  → 0 errors
-// Then migrate:      npx prisma migrate dev --name v2_2_attachments
-
-/**
- * ───────────────────────────────┐
- * │ File: prisma/schema.prisma     │
- * └───────────────────────────────
- */
-
-// ────────────── Generators ───────────────
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins", "fullTextSearchPostgres"]
@@ -21,16 +7,12 @@ generator typescriptInterfaces {
   provider = "prisma-generator-typescript-interfaces"
 }
 
-// ────────────── Datasource ───────────────
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-/**
- * ────────────── Global enums ─────────────
- */
+/* ────────────── Global Enums ────────────── */
 
 enum Role {
   ADMIN
@@ -89,42 +71,48 @@ enum StockReason {
   ADJUSTMENT
 }
 
-/**
- * ──────────── Attachment (S3) ────────────
- * Stores any uploaded file (image, PDF, etc.) in S3 and links it to
- * products, banners or the uploading user.
- */
-model Attachment {
-  id        String   @id @default(cuid())
-
-  /* -------- core metadata -------- */
-  filename  String               // original file name
-  mimeType  String               // e.g. image/png
-  size      Int                  // bytes
-
-  /* -------- actual data -------- */
-  data      Bytes                // binary column (Postgres BYTEA) – you can still store/read as Base-64 in code
-
-  /* -------- optional uploader -------- */
-  uploaderId String?
-  uploader   User?   @relation("UserUploads", fields: [uploaderId], references: [id], onDelete: SetNull)
-
-  /* -------- consumers -------- */
-  products      Product[]      @relation("ProductAttachments")
-  categories    Category[]     @relation("CategoryImage")
-  subCategories SubCategory[]  @relation("SubCategoryImage")  // new camel-case relation name
-
-  /* -------- misc -------- */
-  createdAt DateTime @default(now())
-
-  /* user avatar back-link */
-  User User[] @relation("UserAvatar")
+enum StorageProvider {
+  S3
+  CLOUDINARY
+  LOCAL
 }
 
+/* ────────────── Attachment System ────────────── */
 
-/**
- * ──────────── Auth / Next‑Auth models ─────
- */
+model Attachment {
+  id         String    @id @default(cuid())
+  filename   String
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  storageKey String   // e.g. Cloudinary public_id
+  url        String   // full CDN URL
+
+  uploaderId String?
+  uploader   User?    @relation("UserUploads", fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime @default(now())
+
+  entityLinks AttachmentEntityLink[]
+}
+
+/* Polymorphic many-to-many link between Attachment and any entity */
+model AttachmentEntityLink {
+  id           String     @id @default(cuid())
+  entityType   String     // e.g. "Product", "Category", "Banner", "User"
+  entityId     String
+  attachmentId String
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
+  position     Int?       // optional ordering
+
+  createdAt    DateTime   @default(now())
+
+  @@index([entityType, entityId])
+}
+
+/* ────────────── Auth / Next-Auth ────────────── */
+
 model Account {
   id                       String  @id @default(cuid())
   userId                   String
@@ -162,9 +150,8 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/**
- * ────────────────── Core user models ─────────────────
- */
+/* ────────────── Core User ────────────── */
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -173,14 +160,8 @@ model User {
   phone         String?
   role          Role      @default(CUSTOMER)
 
-  // Avatar stored in Attachment (optional)
-  avatarId String?
-  avatar   Attachment? @relation("UserAvatar", fields: [avatarId], references: [id])
-
-  // Uploads made by the user (profile images, documents, etc.)
   attachments Attachment[] @relation("UserUploads")
 
-  // Auth & activity relations
   accounts  Account[]
   sessions  Session[]
   orders    Order[]
@@ -189,7 +170,6 @@ model User {
   wishlists Wishlist[]
   reviews   ProductReview[]
   eventLogs EventLog[]
-  image     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -197,9 +177,8 @@ model User {
   InventoryStock InventoryStock[]
 }
 
-/**
- * ────────────────── Catalog layer ───────────────────
- */
+/* ────────────── Catalog Layer ────────────── */
+
 model Category {
   id              String  @id @default(cuid())
   name            String
@@ -212,17 +191,11 @@ model Category {
   parent   Category?  @relation("CategoryToParent", fields: [parentId], references: [id])
   children Category[] @relation("CategoryToParent")
 
-
   promotions Promotion[] @relation("CategoryPromotions")
-
   subcategories   SubCategory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  attachmentId String?
-  attachments   Attachment? @relation("CategoryImage", fields: [attachmentId], references: [id])
-
-  @@index([slug])
 }
 
 model SubCategory {
@@ -233,19 +206,13 @@ model SubCategory {
   metaTitle       String?
   metaDescription String?
 
-  // Parent category
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
-  // Products link here
   products   Product[]
-
-  attachmentId String?
-  attachments  Attachment? @relation("SubCategoryImage", fields: [attachmentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@index([slug])
 }
 
 model Product {
@@ -261,55 +228,36 @@ model Product {
   ratingCount     Int      @default(0)
   taxable         Boolean  @default(true)
 
-  // Images now stored as attachments
-  attachments Attachment[] @relation("ProductAttachments")
-
   subCategoryId String
   subCategory   SubCategory @relation(fields: [subCategoryId], references: [id])
-  variants      ProductVariant[]
   promotions    Promotion[]      @relation("ProductPromotions")
   reviews       ProductReview[]
   wishlistItems WishlistItem[]
 
-  defaultPrice Decimal  @db.Decimal(10, 2)
   currency     Currency @default(BRL)
   active       Boolean  @default(true)
+  sku          String   @unique
+  barcode      String?  @unique
+  ean          String?  @unique
+  defaultPrice        Decimal  @db.Decimal(10, 2)
+  price        Decimal  @db.Decimal(10, 2)
+  stock        Int      @default(0)
+  attributes   Json?
+  weightGrams  Int?
+  widthMm      Int?
+  heightMm     Int?
+  lengthMm     Int?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([slug])
-}
-
-model ProductVariant {
-  id        String  @id @default(cuid())
-  productId String
-  sku       String  @unique
-  barcode   String? @unique
-  ean       String? @unique
-
-  product      Product          @relation(fields: [productId], references: [id])
   orderItems   OrderItem[]
   cartItems    CartItem[]
   stockLedgers InventoryStock[]
 
-  price       Decimal  @db.Decimal(10, 2)
-  currency    Currency @default(BRL)
-  stock       Int      @default(0)
-  attributes  Json?
-  weightGrams Int?
-  widthMm     Int?
-  heightMm    Int?
-  lengthMm    Int?
-  active      Boolean  @default(true)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-/**
- * ────────────────── Promotions & banners ─────────────
- */
+/* ────────────── Promotions & Banners ────────────── */
+
 model Promotion {
   id           String       @id @default(cuid())
   name         String
@@ -344,17 +292,12 @@ model Banner {
   endsAt        DateTime?
   active        Boolean   @default(true)
 
-  attachment   Json
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([position, active])
 }
 
-/**
- * ────────────────── Commerce: cart & wishlists ──────
- */
+/* ────────────── Cart & Wishlists ────────────── */
+
 model Cart {
   id       String     @id @default(cuid())
   userId   String?
@@ -371,13 +314,13 @@ model Cart {
 model CartItem {
   id               String   @id @default(cuid())
   cartId           String
-  productVariantId String
+  productId        String
   quantity         Int      @default(1)
   unitPrice        Decimal  @db.Decimal(10, 2)
   currency         Currency @default(BRL)
 
-  cart    Cart           @relation(fields: [cartId], references: [id])
-  variant ProductVariant @relation(fields: [productVariantId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 model Wishlist {
@@ -399,9 +342,8 @@ model WishlistItem {
   product  Product  @relation(fields: [productId], references: [id])
 }
 
-/**
- * ────────────────── Reviews & ratings ───────────────
- */
+/* ────────────── Reviews ────────────── */
+
 model ProductReview {
   id        String  @id @default(cuid())
   productId String
@@ -418,26 +360,24 @@ model ProductReview {
   updatedAt DateTime @updatedAt
 }
 
-/**
- * ────────────────── Inventory ───────────────────────
- */
+/* ────────────── Inventory ────────────── */
+
 model InventoryStock {
   id               String      @id @default(cuid())
-  productVariantId String
+  productId        String
   change           Int
   reason           StockReason
   note             String?
   snapshotAfter    Int
   createdByUserId  String?
 
-  variant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  createdBy User?          @relation(fields: [createdByUserId], references: [id])
-  createdAt DateTime       @default(now())
+  product   Product @relation(fields: [productId], references: [id])
+  createdBy User?   @relation(fields: [createdByUserId], references: [id])
+  createdAt DateTime @default(now())
 }
 
-/**
- * ────────────────── Logistics & payments ────────────
- */
+/* ────────────── Logistics & Payments ────────────── */
+
 model ShippingMethod {
   id        String   @id @default(cuid())
   name      String
@@ -500,19 +440,16 @@ model Order {
 model OrderItem {
   id               String   @id @default(cuid())
   orderId          String
-  productVariantId String
+  productId        String
   quantity         Int      @default(1)
   unitPrice        Decimal  @db.Decimal(10, 2)
   currency         Currency @default(BRL)
   total            Decimal  @db.Decimal(10, 2)
 
-  order          Order          @relation(fields: [orderId], references: [id])
-  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
-/**
- * ────────────────── Addresses & misc. ───────────────
- */
 model Address {
   id         String  @id @default(cuid())
   userId     String?
@@ -547,7 +484,3 @@ model EventLog {
 
   user User? @relation(fields: [userId], references: [id])
 }
-
-/**
- * ──────── End of schema – validated ✔︎ ───────
- */

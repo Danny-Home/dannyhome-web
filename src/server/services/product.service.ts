@@ -1,156 +1,134 @@
-import "server-only";
-
-import { buildCrudService } from "@/server/services/base.service";
-import { db } from "@/server/db";
-import {
-  storageService,
-  type UploadedFileMeta,
-} from "@/server/services/storage.service";
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   TCreateProductSchema,
-  TProductVariantSchema,
+  TProductId,
   TUpdateProductSchema,
 } from "@/lib/schemas/product";
-import type { Product } from "prisma/interfaces";
+import type { PrismaClient } from "@prisma/client";
+import {
+  addAttachmentsToEntity,
+  deleteAttachmentsForEntity,
+  STORAGE_KEYS,
+} from "./storage.service";
+import type { TPaginationFilter } from "@/lib/schemas/filters";
 
+export async function listProducts(
+  prisma: PrismaClient,
+  { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
+) {
+  const products = await prisma.product.findMany({
+    skip: (page - 1) * perPage,
+    take: perPage,
+  });
 
-const clean = <T extends Record<string, unknown>>(o: T) =>
-  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as
-    T;
+  const productIds = products.map((p) => p.id);
 
-export const ProductService = {
-  ...buildCrudService<TCreateProductSchema>("product"),
+  if (productIds.length === 0) {
+    return { products: [], total: 0, page, perPage };
+  }
 
-  async create(
-    data: TCreateProductSchema,
-    uploaderId: string,
-  ): Promise<Product> {
-    const { attachments, variants, ...scalar } = data;
+  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType: STORAGE_KEYS.PRODUCT,
+      entityId: { in: productIds },
+    },
+    include: {
+      attachment: true,
+    },
+  });
 
-    const uploaded =
-      attachments?.length
-        ? await storageService.upload(db, attachments, uploaderId)
-        : [];
+  const productMap = new Map<string, any>(
+    products.map((p) => [p.id, { ...p, attachments: [] }]),
+  );
 
-    const product = await db.product.create({
-      data: clean({ ...scalar }),
-    });
-
-    if (uploaded.length) {
-      await db.product.update({
-        where: { id: product.id },
-        data: {
-          attachments: {
-            connect: uploaded.map(({ key }) => ({ key })),
-          },
-        },
-      });
+  for (const link of attachmentLinks) {
+    const product = productMap.get(link.entityId);
+    if (product) {
+      product.attachments.push(link.attachment);
     }
+  }
 
-    if (variants?.length) {
-      await db.productVariant.createMany({
-        data: variants.map((v) => ({ ...v, productId: product.id })),
-      });
-    }
+  const total = await prisma.product.count();
 
-    return product;
-  },
+  return {
+    products: Array.from(productMap.values()),
+    total,
+    page,
+    perPage,
+  };
+}
 
-  async update(
-    productId: string,
-    data: TUpdateProductSchema,
-    userId: string,
-  ): Promise<Product> {
-    const {
-      newAttachments,
-      removeKeys,
-      variants,
-      ...scalar
-    } = data;
+export async function getProductById(prisma: PrismaClient, filter: TProductId) {
+  const product = await prisma.product.findUnique({
+    where: { id: filter.id },
+  });
 
-    const uploaded =
-      newAttachments?.length
-        ? await storageService.upload(db, newAttachments, userId)
-        : [];
+  if (!product) return null;
 
-    if (removeKeys?.length) {
-      await db.product.update({
-        where: { id: productId },
-        data: {
-          attachments: {
-            disconnect: removeKeys.map((key) => ({ key })),
-          },
-        },
-      });
-      await Promise.all(
-        removeKeys.map((key) => storageService.remove(db, key)),
-      );
-    }
+  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType: STORAGE_KEYS.PRODUCT,
+      entityId: filter.id,
+    },
+    include: { attachment: true },
+  });
 
-    const cleanedScalar = Object.fromEntries(
-      Object.entries(scalar).filter(([, v]) => v !== undefined)
-    );
-    const product = await db.product.update({
-      where: { id: productId },
-      data: cleanedScalar,
-    });
+  return {
+    ...product,
+    attachments: attachmentLinks.map((link) => link.attachment),
+  };
+}
 
-    if (uploaded.length) {
-      await db.product.update({
-        where: { id: productId },
-        data: {
-          attachments: {
-            connect: uploaded.map(({ key }) => ({ key })),
-          },
-        },
-      });
-    }
+export async function createProduct(
+  prisma: PrismaClient,
+  payload: TCreateProductSchema,
+) {
+  const { images, ...data } = payload;
 
+  const product = await prisma.product.create({
+    data: {
+      ...data,
+      defaultPrice: data.price,
+    },
+  });
 
-    return product;
-  },
+  if (images?.length) {
+    await addAttachmentsToEntity(prisma, images, "Product", product.id);
+  }
 
-  addVariants(productId: string, variants: TProductVariantSchema[]) {
-    return db.productVariant.createMany({
-      data: variants.map((v) => ({ ...v, productId })),
-    });
-  },
+  return product;
+}
 
-  removeVariant(variantId: string) {
-    return db.productVariant.delete({ where: { id: variantId } });
-  },
+export async function updateProduct(
+  prisma: PrismaClient,
+  payload: TUpdateProductSchema,
+) {
+  const {
+    id,
+    data: { images, ...data },
+  } = payload;
 
-  async recomputeRating(productId: string): Promise<Product> {
-    const agg = await db.productReview.aggregate({
-      where: { productId, approved: true },
-      _avg:   { rating: true },
-      _count: { rating: true },
-    });
+  const product = await prisma.product.update({
+    where: { id },
+    data: {
+      ...data,
+      defaultPrice: data?.price,
+    },
+  });
 
-    return db.product.update({
-      where: { id: productId },
-      data: {
-        ratingAvg:   agg._avg.rating   ?? 0,
-        ratingCount: agg._count.rating,
-      },
-    });
-  },
+  if (images?.length) {
+    await deleteAttachmentsForEntity(prisma, STORAGE_KEYS.PRODUCT, product.id);
+    await addAttachmentsToEntity(prisma, images, "Product", product.id);
+  }
 
-  async deleteWithMedia(productId: string) {
-    const product = await db.product.findUnique({
-      where:  { id: productId },
-      select: { attachments: { select: { key: true, url: true, mimeType: true, size: true } } },
-    });
-    if (!product) throw new Error("Product not found");
+  return product;
+}
 
-    await db.product.delete({ where: { id: productId } });
+export async function deleteProduct(prisma: PrismaClient, { id }: TProductId) {
+  await deleteAttachmentsForEntity(prisma, STORAGE_KEYS.PRODUCT, id);
+  const product = await prisma.product.delete({ where: { id } });
 
-    await Promise.all(
-      product.attachments.map((a: UploadedFileMeta) =>
-        storageService.remove(db, a.key),
-      ),
-    );
-
-    return { deleted: true, id: productId } as const;
-  },
-};
+  return product;
+}

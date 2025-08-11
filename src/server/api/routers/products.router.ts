@@ -1,73 +1,103 @@
-import { paginationInput } from "@/lib/schemas/common";
+import { paginationFilterSchema } from "@/lib/schemas/filters";
 import {
   createProductSchema,
   productIdSchema,
-  productVariantInput,
   updateProductSchema,
 } from "@/lib/schemas/product";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
-import { ProductVariantService } from "@/server/services/product-variant.service";
-import { ProductService } from "@/server/services/product.service";
-import z from "zod";
+import {
+  createProduct,
+  deleteProduct,
+  getProductById,
+  listProducts,
+  updateProduct,
+} from "@/server/services/product.service";
+import { TRPCError } from "@trpc/server";
 
 export const productsRouter = createTRPCRouter({
   list: adminProcedure
-    .input(paginationInput.optional())
-    .query(({ input }) =>
-      ProductService.list(input ?? { page: 1, perPage: 20 }),
-    ),
+    .input(paginationFilterSchema)
+    .query(async ({ input, ctx }) => {
+      try {
+        return await listProducts(ctx.db, input);
+      } catch (error) {
+        console.error(error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch products",
+        });
+      }
+    }),
 
-  byId: adminProcedure
-    .input(productIdSchema)
-    .query(({ input }) => ProductService.byId(input.id)),
+  byId: adminProcedure.input(productIdSchema).query(async ({ input, ctx }) => {
+    try {
+      const product = await getProductById(ctx.db, input);
+
+      if (!product) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Product not found",
+        });
+      }
+
+      return product;
+    } catch (error) {
+      console.log(error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch product",
+      });
+    }
+  }),
 
   create: adminProcedure
     .input(createProductSchema)
-    .mutation(({ input }) => ProductService.create(input)),
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await createProduct(ctx.db, input);
+      } catch (error) {
+        console.error(error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create product",
+        });
+      }
+    }),
 
   update: adminProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        data: updateProductSchema,
-      }),
-    )
-    .mutation(({ input }) => ProductService.update(input.id, input.data)),
+    .input(updateProductSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await updateProduct(ctx.db, input);
+      } catch (error) {
+        console.error(error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update",
+        });
+      }
+    }),
 
   delete: adminProcedure
     .input(productIdSchema)
-    .mutation(({ input }) => ProductService.delete(input.id)),
+    .mutation(async ({ input, ctx }) => {
+      const product = await deleteProduct(ctx.db, input);
+
+      if (!product)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Product not found",
+        });
+
+      return product;
+    }),
 
   recomputeRating: adminProcedure
     .input(productIdSchema)
-    .mutation(({ input }) => ProductService.recomputeRating(input.id)),
-
-  addVariant: adminProcedure
-    .input(
-      z.object({
-        productId: z.string().uuid(),
-        variant: productVariantInput,
-      }),
-    )
-    .mutation(({ input }) =>
-      ProductVariantService.create({
-        ...input.variant,
-        productId: input.productId,
-      }),
-    ),
-
-  updateVariant: adminProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        data: productVariantInput.partial(),
-      }),
-    )
-    .mutation(({ input }) =>
-      ProductVariantService.update(input.id, input.data),
-    ),
-
-  deleteVariant: adminProcedure
-    .input(z.object({ id: z.string().uuid() }))
-    .mutation(({ input }) => ProductVariantService.delete(input.id)),
+    .mutation(({ input }) => {
+      throw new TRPCError({
+        code: "NOT_IMPLEMENTED",
+        message: "This feature was not implemented yet",
+      });
+    }),
 });

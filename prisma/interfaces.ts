@@ -18,19 +18,31 @@ export type CartStatus = "ACTIVE" | "ABANDONED" | "CONVERTED";
 
 export type StockReason = "MANUAL" | "SALE" | "RESTOCK" | "RETURN" | "ADJUSTMENT";
 
+export type StorageProvider = "S3" | "CLOUDINARY" | "LOCAL";
+
 export interface Attachment {
   id: string;
   filename: string;
   mimeType: string;
   size: number;
-  data: Uint8Array;
+  width: number | null;
+  height: number | null;
+  storageKey: string;
+  url: string;
   uploaderId: string | null;
   uploader?: User | null;
-  products?: Product[];
-  categories?: Category[];
-  subCategories?: SubCategory[];
   createdAt: Date;
-  User?: User[];
+  entityLinks?: AttachmentEntityLink[];
+}
+
+export interface AttachmentEntityLink {
+  id: string;
+  entityType: string;
+  entityId: string;
+  attachmentId: string;
+  attachment?: Attachment;
+  position: number | null;
+  createdAt: Date;
 }
 
 export interface Account {
@@ -71,8 +83,6 @@ export interface User {
   emailVerified: Date | null;
   phone: string | null;
   role: Role;
-  avatarId: string | null;
-  avatar?: Attachment | null;
   attachments?: Attachment[];
   accounts?: Account[];
   sessions?: Session[];
@@ -82,7 +92,6 @@ export interface User {
   wishlists?: Wishlist[];
   reviews?: ProductReview[];
   eventLogs?: EventLog[];
-  image: string | null;
   createdAt: Date;
   updatedAt: Date;
   InventoryStock?: InventoryStock[];
@@ -102,8 +111,6 @@ export interface Category {
   subcategories?: SubCategory[];
   createdAt: Date;
   updatedAt: Date;
-  attachmentId: string | null;
-  attachments?: Attachment | null;
 }
 
 export interface SubCategory {
@@ -116,8 +123,6 @@ export interface SubCategory {
   categoryId: string;
   category?: Category;
   products?: Product[];
-  attachmentId: string | null;
-  attachments?: Attachment | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -134,39 +139,27 @@ export interface Product {
   ratingAvg: number;
   ratingCount: number;
   taxable: boolean;
-  attachments?: Attachment[];
   subCategoryId: string;
   subCategory?: SubCategory;
-  variants?: ProductVariant[];
   promotions?: Promotion[];
   reviews?: ProductReview[];
   wishlistItems?: WishlistItem[];
-  defaultPrice: Decimal;
   currency: Currency;
   active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ProductVariant {
-  id: string;
-  productId: string;
   sku: string;
   barcode: string | null;
   ean: string | null;
-  product?: Product;
-  orderItems?: OrderItem[];
-  cartItems?: CartItem[];
-  stockLedgers?: InventoryStock[];
+  defaultPrice: Decimal;
   price: Decimal;
-  currency: Currency;
   stock: number;
   attributes: JsonValue | null;
   weightGrams: number | null;
   widthMm: number | null;
   heightMm: number | null;
   lengthMm: number | null;
-  active: boolean;
+  orderItems?: OrderItem[];
+  cartItems?: CartItem[];
+  stockLedgers?: InventoryStock[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -200,7 +193,6 @@ export interface Banner {
   startsAt: Date | null;
   endsAt: Date | null;
   active: boolean;
-  attachment: JsonValue;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -219,12 +211,12 @@ export interface Cart {
 export interface CartItem {
   id: string;
   cartId: string;
-  productVariantId: string;
+  productId: string;
   quantity: number;
   unitPrice: Decimal;
   currency: Currency;
   cart?: Cart;
-  variant?: ProductVariant;
+  product?: Product;
 }
 
 export interface Wishlist {
@@ -261,13 +253,13 @@ export interface ProductReview {
 
 export interface InventoryStock {
   id: string;
-  productVariantId: string;
+  productId: string;
   change: number;
   reason: StockReason;
   note: string | null;
   snapshotAfter: number;
   createdByUserId: string | null;
-  variant?: ProductVariant;
+  product?: Product;
   createdBy?: User | null;
   createdAt: Date;
 }
@@ -328,13 +320,13 @@ export interface Order {
 export interface OrderItem {
   id: string;
   orderId: string;
-  productVariantId: string;
+  productId: string;
   quantity: number;
   unitPrice: Decimal;
   currency: Currency;
   total: Decimal;
   order?: Order;
-  productVariant?: ProductVariant;
+  product?: Product;
 }
 
 export interface Address {
