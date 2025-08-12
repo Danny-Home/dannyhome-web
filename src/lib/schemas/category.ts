@@ -40,10 +40,8 @@ export const subCategoryIdSchema = z.object({
   id: z.string().uuid(),
 });
 
-/* --------------------------------------------------------------------------- */
-/*  TYPES                                                                     */
-/* --------------------------------------------------------------------------- */
 export type TCreateCategorySchema      = z.infer<typeof createCategorySchema>;
 export type TUpdateCategorySchema      = z.infer<typeof updateCategorySchema>;
 export type TCreateSubCategorySchema   = z.infer<typeof createSubCategorySchema>;
 export type TUpdateSubCategorySchema   = z.infer<typeof updateSubCategorySchema>;
+export type TCategorySchema            = z.infer<typeof categoryIdSchema>;

@@ -8,17 +8,17 @@ import {
 // import { CategoryService } from "@/server/services";
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc";
 import { paginationInput } from "@/lib/schemas/common";
-import { CategoryService } from "@/server/services/category.service";
+import {  createCategory, getCategoryById, listCategories } from "@/server/services/category.service";
+import { TRPCError } from "@trpc/server";
 
 
 export const categoryRouter = createTRPCRouter({
   list: adminProcedure
     .input(paginationInput.optional())
-    .query(({ input }) =>
-      CategoryService.list(input ?? { page: 1, perPage: 20 }),
+    .query(async ({ input, ctx }) =>{
+      return await listCategories(ctx.db, input);
+    }
     ),
-
-  tree: adminProcedure.query(() => CategoryService.listWithChildren()),
   listOptions: adminProcedure.query(({ctx}) => {
     return ctx.db.category.findMany({
       include: {
@@ -29,21 +29,34 @@ export const categoryRouter = createTRPCRouter({
 
   byId: adminProcedure
     .input(categoryIdSchema)
-    .query(({ input }) => CategoryService.byId(input.id)),
+    .query(async ({ input, ctx }) => {
+      const category = await getCategoryById(ctx.db, input);
+
+      if (!category) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: "Category Not found"
+        });
+      }
+
+      return category;
+    }),
 
   create: adminProcedure
     .input(createCategorySchema)
-    .mutation(({ input }) => CategoryService.create(input)),
+    .mutation(async ({ input, ctx }) => {
+      return await createCategory(ctx.db, input);
+    }),
 
-  update: adminProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        data: updateCategorySchema,
-      }),
-    )
-    .mutation(({ input }) => CategoryService.update(input.id, input.data)),
-  delete: adminProcedure
-    .input(categoryIdSchema)
-    .mutation(({ input }) => CategoryService.delete(input.id)),
+  // update: adminProcedure
+  //   .input(
+  //     z.object({
+  //       id: z.string().uuid(),
+  //       data: updateCategorySchema,
+  //     }),
+  //   )
+  //   .mutation(({ input }) => CategoryService.update(input.id, input.data)),
+  // delete: adminProcedure
+  //   .input(categoryIdSchema)
+  //   .mutation(({ input }) => CategoryService.delete(input.id)),
 });

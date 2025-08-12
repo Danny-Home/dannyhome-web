@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { TPaginationFilter } from "@/lib/schemas/filters";
 import type { PrismaClient } from "@prisma/client";
-import { STORAGE_KEYS } from "./storage.service";
+import { addAttachmentsToEntity, STORAGE_KEYS } from "./storage.service";
+import type { TCategorySchema, TCreateCategorySchema } from "@/lib/schemas/category";
 
 export async function listCategories(
   prisma: PrismaClient,
@@ -48,4 +49,45 @@ export async function listCategories(
     page,
     perPage,
   };
+}
+
+
+export async function getCategoryById(prisma: PrismaClient, filter: TCategorySchema) {
+  const category = await prisma.category.findUnique({
+    where: { id: filter.id },
+  });
+
+  if (!category) return null;
+
+  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType: STORAGE_KEYS.CATEGORY,
+      entityId: filter.id,
+    },
+    include: { attachment: true },
+  });
+
+  return {
+    ...category,
+    attachments: attachmentLinks.map((link) => link.attachment),
+  };
+}
+
+export async function createCategory(
+  prisma: PrismaClient,
+  payload: TCreateCategorySchema,
+) {
+  const { image, ...data } = payload;
+
+  const category = await prisma.category.create({
+    data: {
+      ...data,
+    },
+  });
+
+  if (image?.length) {
+    await addAttachmentsToEntity(prisma, image, STORAGE_KEYS.CATEGORY, category.id);
+  }
+
+  return category;
 }
