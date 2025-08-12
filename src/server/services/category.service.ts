@@ -21,7 +21,7 @@ export async function listCategories(
 
   const attachmentLinks = await prisma.attachmentEntityLink.findMany({
     where: {
-      entityType: STORAGE_KEYS.CATEGORY,
+      entityType: STORAGE_KEYS.PRODUCT,
       entityId: { in: categoryIds },
     },
     include: {
