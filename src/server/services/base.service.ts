@@ -1,41 +1,48 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-
-import type { paginationInput } from "@/lib/schemas/common";
-import { db } from "@/server/db";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PrismaClient } from "@prisma/client";
-import type z from "zod";
 
-export type PrismaModel = {
-  [K in keyof PrismaClient]: PrismaClient[K] extends (...args: any) => any ? never : K;
-}[keyof PrismaClient];
+type Fn<A = any, R = any> = (args?: A) => Promise<R>;
+type FindManyArgs<T> = T extends { findMany: (args?: infer A) => any } ? A : never;
+type Items<T> = T extends { findMany: Fn<infer A, infer R> } ? Awaited<R> : never;
 
-interface CrudDelegate<CreateInput, TReturn> {
-  create(args: { data: CreateInput }): Promise<TReturn>;
-  findMany(args: any): Promise<TReturn[]>;
-  findUnique(args: { where: { id: string } }): Promise<TReturn>;
-  update(args: { where: { id: string }; data: Partial<CreateInput> }): Promise<TReturn>;
-  delete(args: { where: { id: string } }): Promise<TReturn>;
+export type PaginationInput<TDelegate> =
+  Omit<FindManyArgs<TDelegate>, "skip" | "take"> & {
+    page?: number;
+    perPage?: number;
+    showAll?: boolean;
+  };
+
+export async function maybePaginate<TDelegate extends { findMany: Fn; count: Fn }>(
+  _prisma: PrismaClient,
+  entity: TDelegate,
+  args: PaginationInput<TDelegate> = {} as PaginationInput<TDelegate>,
+): Promise<{
+  items: Items<TDelegate>;
+  total: number;
+  page: number;
+  perPage: number;
+  showAll: boolean;
+}> {
+  const page = Number.isFinite(args.page) && (args.page!) > 0 ? Math.floor(args.page!) : 1;
+  const perPage =
+    Number.isFinite(args.perPage) && (args.perPage!) > 0 ? Math.floor(args.perPage!) : 20;
+  const showAll = !!args.showAll;
+
+  const { showAll: _sa, page: _p, perPage: _pp, ...rest } = args;
+
+  const [items, total] = await Promise.all([
+    entity.findMany(showAll ? rest : { ...rest, skip: (page - 1) * perPage, take: perPage }),
+    entity.count({ where: (rest as any)?.where }),
+  ]);
+
+  return { items: items as Items<TDelegate>, total, page, perPage, showAll };
 }
 
-export const buildCrudService = <CreateInput>(model: PrismaModel) => {
-  const m = db[model] as unknown as CrudDelegate<CreateInput, Partial<CreateInput>>;
-
-  return {
-    create: (data: CreateInput) => m.create({ data }),
-
-    list: (args: z.infer<typeof paginationInput> = { page: 1, perPage: 20 }) => {
-      const { page, perPage } = args;
-      return m.findMany({
-        skip: (page - 1) * perPage,
-        take: perPage,
-        orderBy: { createdAt: "desc" },
-      });
-    },
-
-    byId: (id: string) => m.findUnique({ where: { id } }),
-
-    update: (id: string, data: Partial<CreateInput>) => m.update({ where: { id }, data }),
-
-    delete: (id: string) => m.delete({ where: { id } }),
-  } as const;
-};
+/*
+Usage:
+const { items: products, total, page, perPage } = await maybePaginate(
+  prisma,
+  prisma.product,
+  { page, perPage, showAll, where, orderBy, include }
+);
+*/

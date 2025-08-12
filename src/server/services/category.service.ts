@@ -2,75 +2,48 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { TPaginationFilter } from "@/lib/schemas/filters";
 import type { PrismaClient } from "@prisma/client";
-import { addAttachmentsToEntity, STORAGE_KEYS } from "./storage.service";
-import type { TCategorySchema, TCreateCategorySchema } from "@/lib/schemas/category";
+import { addAttachmentsToEntity, includeAttachments, includeAttachmentsForEntity, STORAGE_KEYS } from "./storage.service";
+import type {
+  TCategorySchema,
+  TCreateCategorySchema,
+} from "@/lib/schemas/category";
+import { TRPCError } from "@trpc/server";
+import { maybePaginate } from "@/server/services/base.service";
 
 export async function listCategories(
   prisma: PrismaClient,
-  { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
+  filter: TPaginationFilter = {
+    page: 1,
+    perPage: 20,
+    showAll: true,
+  },
 ) {
-  const categories = await prisma.category.findMany({
-    skip: (page - 1) * perPage,
-    take: perPage,
-  });
-
-  const categoryIds = categories.map((c) => c.id);
-
-  if (categoryIds.length === 0) {
-    return { products: [], total: 0, page, perPage };
-  }
-
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.PRODUCT,
-      entityId: { in: categoryIds },
-    },
-    include: {
-      attachment: true,
-    },
-  });
-
-  const categoryMap = new Map<string, any>(
-    categories.map((c) => [c.id, { ...c, attachments: [] }]),
+  const { items, total, page, perPage, showAll } = await maybePaginate(
+    prisma,
+    prisma.category,
+    filter,
   );
 
-  for (const link of attachmentLinks) {
-    const category = categoryMap.get(link.entityId);
-    if (category) {
-      category.attachments.push(link.attachment);
-    }
-  }
+  const categories = await includeAttachments(
+    prisma,
+    STORAGE_KEYS.CATEGORY,
+    items,
+  );
 
-  const total = await prisma.category.count();
-
-  return {
-    categories: Array.from(categoryMap.values()),
-    total,
-    page,
-    perPage,
-  };
+  return { categories, total, page, perPage, showAll };
 }
 
-
-export async function getCategoryById(prisma: PrismaClient, filter: TCategorySchema) {
+export async function getCategoryById(
+  prisma: PrismaClient,
+  filter: TCategorySchema,
+) {
   const category = await prisma.category.findUnique({
     where: { id: filter.id },
   });
 
   if (!category) return null;
 
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.CATEGORY,
-      entityId: filter.id,
-    },
-    include: { attachment: true },
-  });
-
-  return {
-    ...category,
-    attachments: attachmentLinks.map((link) => link.attachment),
-  };
+  return includeAttachmentsForEntity(prisma, STORAGE_KEYS.CATEGORY, category);
 }
 
 export async function createCategory(
@@ -86,7 +59,18 @@ export async function createCategory(
   });
 
   if (image?.length) {
-    await addAttachmentsToEntity(prisma, image, STORAGE_KEYS.CATEGORY, category.id);
+    const result = await addAttachmentsToEntity(
+      prisma,
+      image,
+      STORAGE_KEYS.CATEGORY,
+      category.id,
+    );
+    if (!(result.length > 0)) {
+      throw new TRPCError({
+        code: "UNPROCESSABLE_CONTENT",
+        message: "Failed to upload images. Try again",
+      });
+    }
   }
 
   return category;

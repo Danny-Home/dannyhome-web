@@ -1,11 +1,7 @@
-import { z } from "zod";
 import {
   createCategorySchema,
-  updateCategorySchema,
   categoryIdSchema,
-  // paginationInput,
 } from "@/lib/schemas/category";
-// import { CategoryService } from "@/server/services";
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc";
 import { paginationInput } from "@/lib/schemas/common";
 import {  createCategory, getCategoryById, listCategories } from "@/server/services/category.service";
@@ -45,7 +41,15 @@ export const categoryRouter = createTRPCRouter({
   create: adminProcedure
     .input(createCategorySchema)
     .mutation(async ({ input, ctx }) => {
-      return await createCategory(ctx.db, input);
+      try {
+        return await createCategory(ctx.db, input);
+      } catch (error){
+        console.error(error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error?.message
+        })
+      }
     }),
 
   // update: adminProcedure

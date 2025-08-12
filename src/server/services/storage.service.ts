@@ -1,9 +1,54 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PrismaClient } from "@prisma/client";
-import { cloudinary, uploadImageBase64 } from "@/server/cloudinary";
+import {  uploadImageBase64 } from "@/server/cloudinary";
 import type { z } from "zod";
-import { base64FileInput } from "@/lib/schemas/product";
+import { type base64FileInput } from "@/lib/schemas/product";
+import {v2 as cloudinary} from 'cloudinary'
+import type { Attachment } from "prisma/interfaces";
 
 export type Base64File = z.infer<typeof base64FileInput>;
+
+export async function includeAttachments<T extends { id: string }>(
+  prisma: PrismaClient,
+  entityType: string,
+  entities: T[]
+): Promise<(T & { attachments: any[] })[]> {
+  if (entities.length === 0) return [];
+
+  const links = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType,
+      entityId: { in: entities.map(e => e.id) },
+    },
+    include: { attachment: true },
+  });
+
+  const map = new Map<string, T & { attachments: any[] }>(
+    entities.map(e => [e.id, { ...e, attachments: [] }])
+  );
+
+  for (const link of links) {
+    const target = map.get(link.entityId);
+    if (target) target.attachments.push(link.attachment);
+  }
+
+  return Array.from(map.values());
+}
+
+export async function includeAttachmentsForEntity<T extends { id: string }>(
+  prisma: PrismaClient,
+  entityType: string,
+  entity: T | null
+): Promise<(T & { attachments: Attachment[] }) | null> {
+  if (!entity) return null;
+
+  const links = await prisma.attachmentEntityLink.findMany({
+    where: { entityType, entityId: entity.id },
+    include: { attachment: true },
+  });
+
+  return { ...entity, attachments: links.map(l => l.attachment) };
+}
 
 /**
  * Uploads multiple base64 images, creates attachments and links them to an entity.
@@ -18,26 +63,31 @@ export async function addAttachmentsToEntity(
   entityType: string,
   entityId: string,
 ) {
+  const uploaded = [];
+
   for (const file of files) {
-    const imgData = await uploadImageBase64(
+    const {publicId, ...imgData} = await uploadImageBase64(
       file.data,
       entityType.toLowerCase() + "s",
       file.name,
     );
-    // imgData should include publicId, url, mimeType, size, width, height, etc.
 
     const attachment = await prisma.attachment.create({
-      data: { ...imgData, storageKey: imgData.publicId },
+      data: { ...imgData, storageKey: publicId },
     });
 
-    await prisma.attachmentEntityLink.create({
+    const link = await prisma.attachmentEntityLink.create({
       data: {
         entityType,
         entityId,
         attachmentId: attachment.id,
       },
     });
+
+    uploaded.push(link);
   }
+
+  return uploaded;
 }
 
 /**

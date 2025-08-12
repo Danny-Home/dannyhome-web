@@ -16,12 +16,22 @@ import type { TPaginationFilter } from "@/lib/schemas/filters";
 
 export async function listProducts(
   prisma: PrismaClient,
-  { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
+  { page, perPage, showAll }: TPaginationFilter = {
+    page: 1,
+    perPage: 20,
+    showAll: false,
+  },
 ) {
-  const products = await prisma.product.findMany({
-    skip: (page - 1) * perPage,
-    take: perPage,
-  });
+  let products = [];
+
+  if (showAll) {
+    products = await prisma.product.findMany();
+  } else {
+    products = await prisma.product.findMany({
+      skip: (page - 1) * perPage,
+      take: perPage,
+    });
+  }
 
   const productIds = products.map((p) => p.id);
 
@@ -57,6 +67,7 @@ export async function listProducts(
     total,
     page,
     perPage,
+    showAll
   };
 }
 
