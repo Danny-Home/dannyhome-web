@@ -10,65 +10,25 @@ import type { PrismaClient } from "@prisma/client";
 import {
   addAttachmentsToEntity,
   deleteAttachmentsForEntity,
+  includeAttachments,
+  includeAttachmentsForEntity,
   STORAGE_KEYS,
 } from "./storage.service";
-import type { TPaginationFilter } from "@/lib/schemas/filters";
+import { defaultPagination, type TPaginationFilter } from "@/lib/schemas/filters";
+import { maybePaginate } from "@/server/services/base.service";
 
 export async function listProducts(
   prisma: PrismaClient,
-  { page, perPage, showAll }: TPaginationFilter = {
-    page: 1,
-    perPage: 20,
-    showAll: false,
-  },
+  filters: TPaginationFilter = defaultPagination,
 ) {
-  let products = [];
+  const { items, ...meta } = await maybePaginate(prisma, prisma.category, filters);
 
-  if (showAll) {
-    products = await prisma.product.findMany();
-  } else {
-    products = await prisma.product.findMany({
-      skip: (page - 1) * perPage,
-      take: perPage,
-    });
-  }
-
-  const productIds = products.map((p) => p.id);
-
-  if (productIds.length === 0) {
-    return { products: [], total: 0, page, perPage };
-  }
-
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.PRODUCT,
-      entityId: { in: productIds },
-    },
-    include: {
-      attachment: true,
-    },
-  });
-
-  const productMap = new Map<string, any>(
-    products.map((p) => [p.id, { ...p, attachments: [] }]),
-  );
-
-  for (const link of attachmentLinks) {
-    const product = productMap.get(link.entityId);
-    if (product) {
-      product.attachments.push(link.attachment);
-    }
-  }
-
-  const total = await prisma.product.count();
+  const products = await includeAttachments(prisma, STORAGE_KEYS.PRODUCT, items);
 
   return {
-    products: Array.from(productMap.values()),
-    total,
-    page,
-    perPage,
-    showAll
-  };
+    ...meta,
+    products
+  }
 }
 
 export async function getProductById(prisma: PrismaClient, filter: TProductId) {
@@ -78,18 +38,7 @@ export async function getProductById(prisma: PrismaClient, filter: TProductId) {
 
   if (!product) return null;
 
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.PRODUCT,
-      entityId: filter.id,
-    },
-    include: { attachment: true },
-  });
-
-  return {
-    ...product,
-    attachments: attachmentLinks.map((link) => link.attachment),
-  };
+  return includeAttachmentsForEntity(prisma, STORAGE_KEYS.PRODUCT, product);
 }
 
 export async function createProduct(

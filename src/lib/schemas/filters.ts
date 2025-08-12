@@ -9,3 +9,9 @@ export const paginationFilterSchema = z
   .optional();
 
 export type TPaginationFilter = z.infer<typeof paginationFilterSchema>;
+
+export const defaultPagination = {
+  page: 1,
+  perPage: 20,
+  showAll: false
+}

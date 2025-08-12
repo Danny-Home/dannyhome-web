@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { TPaginationFilter } from "@/lib/schemas/filters";
+import { defaultPagination, type TPaginationFilter } from "@/lib/schemas/filters";
 import type { PrismaClient } from "@prisma/client";
 import { addAttachmentsToEntity, includeAttachments, includeAttachmentsForEntity, STORAGE_KEYS } from "./storage.service";
 import type {
@@ -13,8 +13,7 @@ import { maybePaginate } from "@/server/services/base.service";
 export async function listCategories(
   prisma: PrismaClient,
   filter: TPaginationFilter = {
-    page: 1,
-    perPage: 20,
+    ...defaultPagination,
     showAll: true,
   },
 ) {
