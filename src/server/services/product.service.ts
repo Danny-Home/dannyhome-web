@@ -14,21 +14,33 @@ import {
   includeAttachmentsForEntity,
   STORAGE_KEYS,
 } from "./storage.service";
-import { defaultPagination, type TPaginationFilter } from "@/lib/schemas/filters";
+import {
+  defaultPagination,
+  type TPaginationFilter,
+} from "@/lib/schemas/filters";
 import { maybePaginate } from "@/server/services/base.service";
+import { TRPCError } from "@trpc/server";
 
 export async function listProducts(
   prisma: PrismaClient,
   filters: TPaginationFilter = defaultPagination,
 ) {
-  const { items, ...meta } = await maybePaginate(prisma, prisma.category, filters);
+  const { items, ...meta } = await maybePaginate(
+    prisma,
+    prisma.category,
+    filters,
+  );
 
-  const products = await includeAttachments(prisma, STORAGE_KEYS.PRODUCT, items);
+  const products = await includeAttachments(
+    prisma,
+    STORAGE_KEYS.PRODUCT,
+    items,
+  );
 
   return {
     ...meta,
-    products
-  }
+    products,
+  };
 }
 
 export async function getProductById(prisma: PrismaClient, filter: TProductId) {
@@ -77,6 +89,13 @@ export async function updateProduct(
       defaultPrice: data?.price,
     },
   });
+
+  if (!product) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Product not found",
+    });
+  }
 
   if (images?.length) {
     await deleteAttachmentsForEntity(prisma, STORAGE_KEYS.PRODUCT, product.id);
