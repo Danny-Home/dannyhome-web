@@ -1,54 +1,88 @@
 import {
   createCategorySchema,
   categoryIdSchema,
+  updateCategorySchema,
 } from "@/lib/schemas/category";
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc";
-import { paginationInput } from "@/lib/schemas/common";
-import {  createCategory, getCategoryById, listCategories } from "@/server/services/category.service";
+import {
+  createCategory,
+  deleteCategory,
+  getCategoryById,
+  listCategories,
+  updateCategory,
+} from "@/server/services/category.service";
 import { TRPCError } from "@trpc/server";
-
+import { paginationFilterSchema } from "@/lib/schemas/filters";
+import { updateProductSchema } from "@/lib/schemas/product";
 
 export const categoryRouter = createTRPCRouter({
   list: adminProcedure
-    .input(paginationInput.optional())
-    .query(async ({ input, ctx }) =>{
+    .input(paginationFilterSchema)
+    .query(async ({ input, ctx }) => {
       return await listCategories(ctx.db, input);
-    }
-    ),
-  listOptions: adminProcedure.query(({ctx}) => {
+    }),
+  listOptions: adminProcedure.query(({ ctx }) => {
     return ctx.db.category.findMany({
       include: {
-        _count: true
-      }
-    })
+        _count: true,
+      },
+    });
   }),
 
-  byId: adminProcedure
-    .input(categoryIdSchema)
-    .query(async ({ input, ctx }) => {
-      const category = await getCategoryById(ctx.db, input);
+  byId: adminProcedure.input(categoryIdSchema).query(async ({ input, ctx }) => {
+    const category = await getCategoryById(ctx.db, input);
 
-      if (!category) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: "Category Not found"
-        });
-      }
+    if (!category) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Category Not found",
+      });
+    }
 
-      return category;
-    }),
+    return category;
+  }),
 
   create: adminProcedure
     .input(createCategorySchema)
     .mutation(async ({ input, ctx }) => {
       try {
         return await createCategory(ctx.db, input);
-      } catch (error){
+      } catch (error) {
         console.error(error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error?.message
-        })
+          code: "INTERNAL_SERVER_ERROR",
+          message: error?.message,
+        });
+      }
+    }),
+  updateCategory: adminProcedure
+    .input(updateCategorySchema)
+    .mutation(async ({ctx, input}) => {
+        const updatedCategory = await updateCategory(ctx.db, input);
+
+        return updatedCategory;
+    }),
+
+  delete: adminProcedure
+    .input(categoryIdSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const deletedCategory = await deleteCategory(ctx.db, input);
+
+        if (!deletedCategory) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Category not found",
+          });
+        }
+
+        return deletedCategory;
+      } catch (err) {
+        console.error(err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An error has occurred",
+        });
       }
     }),
 

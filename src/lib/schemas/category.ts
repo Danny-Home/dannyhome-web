@@ -16,7 +16,10 @@ export const createCategorySchema = z.object({
   // 🔹  no parentId here anymore – categories are top-level
 });
 
-export const updateCategorySchema = createCategorySchema.partial();
+export const updateCategorySchema = z.object({
+  id: z.string().uuid(),
+  data: createCategorySchema.partial()
+});
 
 export const categoryIdSchema = z.object({
   id: z.string().uuid(),

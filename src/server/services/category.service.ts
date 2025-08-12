@@ -1,11 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { defaultPagination, type TPaginationFilter } from "@/lib/schemas/filters";
+import {
+  defaultPagination,
+  type TPaginationFilter,
+} from "@/lib/schemas/filters";
 import type { PrismaClient } from "@prisma/client";
-import { addAttachmentsToEntity, includeAttachments, includeAttachmentsForEntity, STORAGE_KEYS } from "./storage.service";
+import {
+  addAttachmentsToEntity,
+  deleteAttachmentsForEntity,
+  includeAttachments,
+  includeAttachmentsForEntity,
+  STORAGE_KEYS,
+} from "./storage.service";
 import type {
   TCategorySchema,
   TCreateCategorySchema,
+  TUpdateCategorySchema,
 } from "@/lib/schemas/category";
 import { TRPCError } from "@trpc/server";
 import { maybePaginate } from "@/server/services/base.service";
@@ -71,6 +81,58 @@ export async function createCategory(
       });
     }
   }
+
+  return category;
+}
+
+export async function updateCategory(
+  prisma: PrismaClient,
+  payload: TUpdateCategorySchema,
+) {
+  const {
+    id,
+    data: { image, ...data },
+  } = payload;
+
+  const category = await prisma.category.update({
+    where: {
+      id,
+    },
+    data,
+  });
+
+  if (!category) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Category not found",
+    });
+  }
+
+  if (image && image.length > 0) {
+    await deleteAttachmentsForEntity(
+      prisma,
+      STORAGE_KEYS.CATEGORY,
+      category.id,
+    );
+    await addAttachmentsToEntity(
+      prisma,
+      image,
+      STORAGE_KEYS.CATEGORY,
+      category.id,
+    );
+  }
+
+  return category;
+}
+
+export async function deleteCategory(
+  prisma: PrismaClient,
+  { id }: TCategorySchema,
+) {
+  await deleteAttachmentsForEntity(prisma, STORAGE_KEYS.CATEGORY, id);
+  const category = await prisma.category.delete({
+    where: { id },
+  });
 
   return category;
 }
