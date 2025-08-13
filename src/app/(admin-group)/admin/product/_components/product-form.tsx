@@ -1,45 +1,29 @@
 "use client";
 
+import { useEffect } from "react";
+import slugify from "slugify";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
 import { FileUploader } from "@/components/file-uploader";
 import CategoryComboxBoxWithAdd from "@/components/form/category-combobox-with-add";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-
 import { Textarea } from "@/components/ui/textarea";
-import { type Product } from "@/constants/mock-api";
-import { fileRequestSchema } from "@/lib/schemas/storage";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
-const MAX_FILE_SIZE = 5000000;
-const ACCEPTED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
+import {
+  createProductSchema,
+  type TCreateProductSchema,
+} from "@/lib/schemas/product";
+import { api } from "../../../../../trpc/react";
+import type { Product } from "prisma/interfaces";
 
-const formSchema = z.object({
-  images: z.array(fileRequestSchema),
-  name: z.string().min(2, {
-    message: "Product name must be at least 2 characters.",
-  }),
-  category: z.string(),
-  price: z.number(),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }),
-});
+type FormValues = TCreateProductSchema;
 
 export default function ProductForm({
   initialData,
@@ -48,34 +32,67 @@ export default function ProductForm({
   initialData: Product | null;
   pageTitle: string;
 }) {
-  const defaultValues = {
+  const createProduct = api.products.create.useMutation();
+  const updateProduct = api.products.update.useMutation();
+  const utils = api.useUtils();
+
+  const defaultValues: FormValues = {
     images: [],
     name: initialData?.name ?? "",
-    category: initialData?.category ?? "",
     price: initialData?.price ?? 0,
     description: initialData?.description ?? "",
+    categoryId: initialData?.categoryId ?? "",
+    sku: initialData?.sku ?? "",
+    slug: initialData?.slug ?? "",
+    stock: initialData?.stock ?? 0,
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    values: defaultValues,
-
+  const form = useForm<FormValues>({
+    resolver: zodResolver(createProductSchema),
+    defaultValues,
   });
 
-  form.watch((val) => {
-    console.log(val);
-  });
+  useEffect(() => {
+    const sub = form.watch((v, { name }) => {
+      if (name === "name") {
+        const currentSlug = form.getValues("slug");
+        if (!currentSlug || currentSlug.trim() === "") {
+          form.setValue(
+            "slug",
+            slugify(v.name ?? "", { lower: true, strict: true }),
+            { shouldValidate: true }
+          );
+        }
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [form]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Form submission logic would be implemented here
+  async function onSubmit(values: FormValues) {
+    if (initialData?.id) {
+      await updateProduct.mutateAsync(
+        { id: initialData.id, data: values },
+        {
+          async onSuccess(){
+            await utils.products.list.invalidate();
+          },
+        }
+      );
+      return;
+    }
+
+    await createProduct.mutateAsync(values, {
+      async onSuccess(){
+        await utils.products.list.invalidate();
+        form.reset(defaultValues);
+      },
+    });
   }
 
   return (
     <Card className="mx-auto w-full">
       <CardHeader>
-        <CardTitle className="text-left text-2xl font-bold">
-          {pageTitle}
-        </CardTitle>
+        <CardTitle className="text-left text-2xl font-bold">{pageTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -94,11 +111,6 @@ export default function ProductForm({
                         onValueBase64Change={field.onChange}
                         maxFiles={5}
                         maxSize={4 * 1024 * 1024}
-                        // disabled={loading}
-                        // progresses={progresses}
-                        // pass the onUpload function here for direct upload
-                        // onUpload={uploadFiles}
-                        // disabled={isUploading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -121,9 +133,11 @@ export default function ProductForm({
                   </FormItem>
                 )}
               />
+
+              {/* categoryId (not subcategories) */}
               <FormField
                 control={form.control}
-                name="category"
+                name="categoryId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
@@ -131,11 +145,11 @@ export default function ProductForm({
                       onValueChange={(value) => field.onChange(value)}
                       value={field.value}
                     />
-
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="price"
@@ -147,7 +161,63 @@ export default function ProductForm({
                         type="number"
                         step="0.01"
                         placeholder="Enter price"
-                        {...field}
+                        value={field.value}
+                        onChange={(e) =>
+                          field.onChange(parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Slug */}
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug</FormLabel>
+                    <FormControl>
+                      <Input placeholder="product-slug" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* SKU */}
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Stock Keeping Unit" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Stock */}
+              <FormField
+                control={form.control}
+                name="stock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Enter stock"
+                        value={field.value}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value, 10) || 0)
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -155,24 +225,33 @@ export default function ProductForm({
                 )}
               />
             </div>
+
             <FormField
               control={form.control}
               name="description"
-              render={({ field }) => (
+              render={({ field: { value, ...field } }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Enter product description"
                       className="resize-none"
+                      value={value ?? ""}
                       {...field}
+
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit">Add Product</Button>
+
+            <Button
+              type="submit"
+              isLoading={createProduct.isPending || updateProduct.isPending}
+            >
+              {initialData?.id ? "Save Changes" : "Add Product"}
+            </Button>
           </form>
         </Form>
       </CardContent>

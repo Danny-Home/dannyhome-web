@@ -27,7 +27,7 @@ export async function listProducts(
 ) {
   const { items, ...meta } = await maybePaginate(
     prisma,
-    prisma.category,
+    prisma.product,
     filters,
   );
 

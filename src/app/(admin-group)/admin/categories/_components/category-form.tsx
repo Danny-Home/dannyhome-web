@@ -1,3 +1,5 @@
+'use client'
+
 import { FileUploader } from "@/components/file-uploader";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,53 +16,91 @@ import {
   createCategorySchema,
   type TCreateCategorySchema,
 } from "@/lib/schemas/category";
+import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Category } from "prisma/interfaces";
+import type { Attachment, Category } from "prisma/interfaces";
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import slugify from "slugify";
 import { toast } from "sonner";
 
+type FormValues = TCreateCategorySchema;
+
 type Props = {
   onCreate?: (data: Category) => void;
+  defaultValues?: Category & { attachments?: Attachment[] } | null;
+  isModal?: boolean;
 }
 
-function CategoryForm({ onCreate }: Props) {
+
+
+function CategoryForm({ onCreate, defaultValues, isModal = false }: Props) {
   const apiUtils = api.useUtils();
-  const form = useForm<TCreateCategorySchema>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(createCategorySchema),
-    defaultValues: {
-      description: "",
-      name: "",
-      slug: "",
-      image: [],
+    defaultValues:{
+      image: defaultValues?.attachments?.map((item) => ({data: item.url, name: item.filename, type: item.mimeType})) ?? [],
+      name: defaultValues?.name ?? "",
+      slug: defaultValues?.slug ?? "",
+      description: defaultValues?.description ?? "",
+      metaTitle: defaultValues?.metaTitle ?? "",
+      metaDescription: defaultValues?.metaDescription ?? "",
     },
   });
 
   const createCategory = api.categories.create.useMutation();
+  const updateCategory = api.categories.updateCategory.useMutation();
 
   const updatedName = form.watch("name");
 
   useEffect(() => {
-    form.setValue("slug", slugify(updatedName));
+    form.setValue("slug", slugify(updatedName, {lower: true, strict: true}));
   }, [form, updatedName]);
 
-  function onSubmit(values: TCreateCategorySchema) {
-    createCategory.mutate(values, {
+  // function onSubmit(values: TCreateCategorySchema) {
+  //   createCategory.mutate(values, {
+  //     async onSuccess(data) {
+  //
+  //       await apiUtils.categories.list.invalidate();
+
+
+
+  //     },
+  //     onError(error) {
+  //       toast.error(error.message);
+  //       console.error(error);
+  //     },
+  //   });
+  // }
+
+  async function onSubmit(values: FormValues) {
+    if (defaultValues?.id) {
+      await updateCategory.mutateAsync(
+        { id: defaultValues.id, data: values },
+        {
+          async onSuccess(data) {
+            await apiUtils.categories.list.invalidate();
+            await apiUtils.categories.listOptions.invalidate();
+
+            toast.success("Category updated");
+            if (onCreate) {
+              onCreate(data);
+            }
+          },
+        }
+      );
+      return;
+    }
+    await createCategory.mutateAsync(values, {
       async onSuccess(data) {
-        await apiUtils.categories.listOptions.invalidate();
         await apiUtils.categories.list.invalidate();
+        form.reset();
 
         toast.success("Category created");
         if (onCreate) {
           onCreate(data);
         }
-
-      },
-      onError(error) {
-        toast.error(error.message);
-        console.error(error);
       },
     });
   }
@@ -131,7 +171,8 @@ function CategoryForm({ onCreate }: Props) {
         <Button
           isLoading={createCategory.isPending}
           variant="secondary"
-          className="mt-4 w-full"
+          className={cn("mt-4", !isModal ? "mx-auto justify-self-center w-1/5" : "w-full")}
+          size={isModal ? "sm" : "lg"}
           type="button"
           onClick={form.handleSubmit(onSubmit)}
         >

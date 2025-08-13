@@ -192,7 +192,7 @@ model Category {
   children Category[] @relation("CategoryToParent")
 
   promotions Promotion[] @relation("CategoryPromotions")
-  subcategories   SubCategory[]
+  products   Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,11 +205,6 @@ model SubCategory {
   description     String?
   metaTitle       String?
   metaDescription String?
-
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-
-  products   Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -228,8 +223,8 @@ model Product {
   ratingCount     Int      @default(0)
   taxable         Boolean  @default(true)
 
-  subCategoryId String
-  subCategory   SubCategory @relation(fields: [subCategoryId], references: [id])
+    categoryId     String
+    category       Category @relation(fields: [categoryId], references: [id])
   promotions    Promotion[]      @relation("ProductPromotions")
   reviews       ProductReview[]
   wishlistItems WishlistItem[]
@@ -239,8 +234,8 @@ model Product {
   sku          String   @unique
   barcode      String?  @unique
   ean          String?  @unique
-  defaultPrice        Decimal  @db.Decimal(10, 2)
-  price        Decimal  @db.Decimal(10, 2)
+  defaultPrice        Float  @db.DoublePrecision
+  price        Float  @db.DoublePrecision
   stock        Int      @default(0)
   attributes   Json?
   weightGrams  Int?

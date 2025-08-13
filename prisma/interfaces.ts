@@ -108,7 +108,7 @@ export interface Category {
   parent?: Category | null;
   children?: Category[];
   promotions?: Promotion[];
-  subcategories?: SubCategory[];
+  products?: Product[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -120,9 +120,6 @@ export interface SubCategory {
   description: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
-  categoryId: string;
-  category?: Category;
-  products?: Product[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -139,8 +136,8 @@ export interface Product {
   ratingAvg: number;
   ratingCount: number;
   taxable: boolean;
-  subCategoryId: string;
-  subCategory?: SubCategory;
+  categoryId: string;
+  category?: Category;
   promotions?: Promotion[];
   reviews?: ProductReview[];
   wishlistItems?: WishlistItem[];
@@ -149,8 +146,8 @@ export interface Product {
   sku: string;
   barcode: string | null;
   ean: string | null;
-  defaultPrice: Decimal;
-  price: Decimal;
+  defaultPrice: number;
+  price: number;
   stock: number;
   attributes: JsonValue | null;
   weightGrams: number | null;
