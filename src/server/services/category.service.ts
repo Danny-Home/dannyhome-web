@@ -39,6 +39,8 @@ export async function listCategories(
     items,
   );
 
+  console.log(categories);
+
   return { categories, total, page, perPage, showAll };
 }
 

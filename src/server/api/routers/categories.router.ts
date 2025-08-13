@@ -19,7 +19,8 @@ export const categoryRouter = createTRPCRouter({
   list: adminProcedure
     .input(paginationFilterSchema)
     .query(async ({ input, ctx }) => {
-      return await listCategories(ctx.db, input);
+      const data = await listCategories(ctx.db, input);
+      return data;
     }),
   listOptions: adminProcedure.query(({ ctx }) => {
     return ctx.db.category.findMany({

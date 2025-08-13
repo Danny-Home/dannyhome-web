@@ -18,8 +18,8 @@ export function CategoryTable<TData, TValue>({
   totalItems,
   columns,
 }: CategoryTableParams<TData, TValue>) {
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [perPage, setPerPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
+  // const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [perPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
 
   const pageCount = Math.ceil(totalItems / perPage);
 
