@@ -1,12 +1,10 @@
-import { type Product } from "@/constants/data";
-import { fakeProducts } from "@/constants/mock-api";
+
 import { searchParamsCache } from "@/lib/searchparams";
 import { ProductTable } from "./product-tables";
 import { columns } from "./product-tables/columns";
 import { trpc } from "@/trpc/server";
 
 export default async function ProductListingPage() {
-  // Showcasing the use of search params cache in nested RSCs
   const page = searchParamsCache.get("page");
   const search = searchParamsCache.get("name");
   const pageLimit = searchParamsCache.get("perPage");

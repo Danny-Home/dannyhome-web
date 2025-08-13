@@ -3,6 +3,7 @@
 
 import { DataTable } from "@/components/ui/table/data-table";
 import { DataTableToolbar } from "@/components/ui/table/data-table-toolbar";
+
 import { useDataTable } from "@/hooks/use-data-table";
 import { type ColumnDef } from "@tanstack/react-table";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -18,7 +19,6 @@ export function CategoryTable<TData, TValue>({
   totalItems,
   columns,
 }: CategoryTableParams<TData, TValue>) {
-  // const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [perPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
 
   const pageCount = Math.ceil(totalItems / perPage);

@@ -29,7 +29,7 @@ export default async function Page(props: pageProps) {
 
   return (
     <HydrateClient>
-      <PageContainer>
+      <PageContainer >
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
             <Heading title="Categories" description="Manage categories" />
@@ -43,7 +43,7 @@ export default async function Page(props: pageProps) {
           <Separator />
           <Suspense
             fallback={
-              <DataTableSkeleton columnCount={4} rowCount={8} filterCount={2} />
+              <DataTableSkeleton columnCount={4} rowCount={10} filterCount={2} />
             }
           >
             <CategoryListingPage />

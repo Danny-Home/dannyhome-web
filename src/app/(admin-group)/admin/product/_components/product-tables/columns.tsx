@@ -3,11 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/ui/table/data-table-column-header";
 import { type Column, type ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Text, XCircle } from "lucide-react";
-import Image from "next/image";
 import { CellAction } from "./cell-action";
-import { CATEGORY_OPTIONS } from "./options";
 import type { Product } from "prisma/interfaces";
-import { revokeIfBlob } from '../../../../../../lib/utils';
 
 export const columns: ColumnDef<Product>[] = [
   // {
