@@ -30,9 +30,9 @@ async function CollectionsPage(props: pageProps) {
       <PageContainer scrollable={false}>
         <div className="flex flex-1 flex-col space-y-4">
           <div className="flex items-start justify-between">
-            <Heading title="Products" description="Manage products" />
+            <Heading title="Collections" description="Manage collections" />
             <Link
-              href="/admin/product/new"
+              href="/admin/collections/new"
               className={cn(buttonVariants(), "text-xs md:text-sm")}
             >
               <IconPlus className="mr-2 h-4 w-4" /> Add New

@@ -43,21 +43,25 @@ function CollectionCard({ collection }: Props) {
           {/* <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" /> */}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col justify-start items-start p-0 space-y-2">
-        <h3 className="text-sm font-medium md:text-base">{collection.name}</h3>
-        <p className="text-muted-foreground mt-1 text-xs md:text-sm">
-          {collection.description
-            ? collection.description.length > 100
-              ? collection.description.substring(0, 100) + "..."
-              : collection.description
-            : "No description"}
-        </p>
-        <div className="flex w-full items-center justify-between">
-          <Button variant="soft">
+      <CardFooter className="flex flex-col items-start justify-start space-y-4">
+        <div className="flex flex-col gap-y-2">
+          <h3 className="text-sm font-medium md:text-base">
+            {collection.name}
+          </h3>
+          <p className="text-muted-foreground  text-xs md:text-sm">
+            {collection.description
+              ? collection.description.length > 100
+                ? collection.description.substring(0, 100) + "..."
+                : collection.description
+              : "No description"}
+          </p>
+        </div>
+        <div className="flex w-full items-center justify-between gap-x-2">
+          <Button variant="soft" className="w-1/2">
             <IconPencil className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="destructive">
+          <Button variant="destructive" className="w-1/2">
             <IconTrash className="mr-2 h-4 w-4" /> Delete
           </Button>
         </div>
