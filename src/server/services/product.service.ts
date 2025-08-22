@@ -111,3 +111,53 @@ export async function deleteProduct(prisma: PrismaClient, { id }: TProductId) {
 
   return product;
 }
+
+
+export async function searchProducts(prisma: PrismaClient, input: any) {
+  const page = input?.page ?? 1;
+  const perPage = input?.perPage ?? 24;
+
+  const where: any = { active: true };
+
+  if (input?.q) {
+    where.OR = [
+      { name: { contains: input.q, mode: "insensitive" } },
+      { description: { contains: input.q, mode: "insensitive" } },
+    ];
+  }
+  if (Array.isArray(input?.categoryIds) && input.categoryIds.length) {
+    where.categoryId = { in: input.categoryIds };
+  }
+  if (typeof input?.minPrice === "number" || typeof input?.maxPrice === "number") {
+    where.price = {};
+    if (typeof input.minPrice === "number") where.price.gte = input.minPrice;
+    if (typeof input.maxPrice === "number") where.price.lte = input.maxPrice;
+  }
+  if (input?.inStock) {
+    where.stock = { gt: 0 };
+  }
+
+  let orderBy: any = { createdAt: "desc" };
+  switch (input?.sort) {
+    case "priceAsc":
+      orderBy = { price: "asc" }; break;
+    case "priceDesc":
+      orderBy = { price: "desc" }; break;
+    case "rating":
+      orderBy = [{ ratingAvg: "desc" }, { ratingCount: "desc" }]; break;
+    case "newest":
+    default:
+      orderBy = { createdAt: "desc" };
+  }
+
+  const { items, total } = await maybePaginate(
+    prisma,
+    prisma.product,
+    { page, perPage, showAll: false, where, orderBy }
+  );
+
+  const products = await includeAttachments(prisma, STORAGE_KEYS.PRODUCT, items);
+
+  return { products, page, perPage, total };
+}
+

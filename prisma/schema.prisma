@@ -249,6 +249,8 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  CollectionProduct CollectionProduct[]
 }
 
 /* ────────────── Promotions & Banners ────────────── */
@@ -478,4 +480,37 @@ model EventLog {
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id])
+}
+
+
+/* ────────────── Collections ────────────── */
+
+model Collection {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  heroTitle     String?
+  heroSubtitle  String?
+  active        Boolean  @default(true)
+
+  products      CollectionProduct[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CollectionProduct {
+  id           String     @id @default(cuid())
+  collectionId String
+  productId    String
+  position     Int        @default(0)
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([collectionId, productId])
+  @@index([collectionId, position])
 }

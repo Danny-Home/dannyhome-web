@@ -120,6 +120,8 @@ export async function deleteAttachmentsForEntity(
 export const STORAGE_KEYS = {
   PRODUCT: "Product",
   CATEGORY: "Category",
+  COLLECTION: "Collection",
+  BANNER: "Banner",
 };
 
 /*

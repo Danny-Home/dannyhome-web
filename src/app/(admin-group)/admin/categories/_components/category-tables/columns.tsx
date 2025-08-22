@@ -10,38 +10,7 @@ import type { Category } from "prisma/interfaces";
 
 
 export const columns: ColumnDef<Category>[] = [
-  {
-    accessorKey: "name",
-    id: 'name',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="NAME" />
-    ),
-
-    // meta: {
-    //   label: "name",
-    //   variant: "text",
-    //   icon: Text,
-    // },
-  },
-  {
-    accessorKey: "slug",
-    id: 'slug',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="SLUG" />
-    ),
-    // meta: {
-    //   label: "slug",
-    //   variant: "text",
-    //   icon: Text,
-    // },
-  },
-
-  // {
-  //   id: "actions",
-
-  //   header: "ACTIONS",
-  //   cell: ({ row }) => <CellAction data={row.original} />,
-  //   enableSorting: false,
-  //   enableHiding: false,
-  // },
+  { accessorKey: "name", id: 'name', header: "Name" },
+  { accessorKey: "slug", id: 'slug',  header: "Slug" },
+  { accessorKey: "metaTitle", id: 'metaTitle', header: "Meta Title" },
 ];

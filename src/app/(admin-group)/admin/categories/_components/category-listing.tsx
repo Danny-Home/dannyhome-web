@@ -1,3 +1,4 @@
+
 import { searchParamsCache } from "@/lib/searchparams";
 import { CategoryTable } from "./category-tables";
 import { columns } from "./category-tables/columns";

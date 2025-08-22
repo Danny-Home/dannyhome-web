@@ -20,11 +20,16 @@ import type {
 import { TRPCError } from "@trpc/server";
 import { maybePaginate } from "@/server/services/base.service";
 
+export type TListCategoriesFilter = {
+  hideWithoutImages?: boolean;
+}
+
 export async function listCategories(
   prisma: PrismaClient,
-  filter: TPaginationFilter = {
+  {hideWithoutImages, ...filter}: TPaginationFilter & TListCategoriesFilter = {
     ...defaultPagination,
     showAll: true,
+    hideWithoutImages: false,
   },
 ) {
   const { items, total, page, perPage, showAll } = await maybePaginate(
@@ -33,13 +38,19 @@ export async function listCategories(
     filter,
   );
 
+
+
   const categories = await includeAttachments(
     prisma,
     STORAGE_KEYS.CATEGORY,
     items,
   );
 
-  return { categories, total, page, perPage, showAll };
+  const filteredCategories = hideWithoutImages
+    ? categories.filter((c) => (c.attachments.length > 0))
+    : categories;
+
+  return { categories: filteredCategories, total, page, perPage, showAll };
 }
 
 export async function getCategoryById(

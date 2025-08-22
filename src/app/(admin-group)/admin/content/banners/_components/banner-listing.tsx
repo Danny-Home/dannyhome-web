@@ -22,12 +22,12 @@ type Props = {
       </TabsList>
       <TabsContent value="full-banner">
           <HoverEffect  items={banners} Content={(banner) => (
-            <Card key={banner.id}>
+            <Card key={banner.id} className="z-10">
               <CardHeader>
                 hello
               </CardHeader>
               <CardContent>
-                <Image width={200} height={200} src={buildViewableUrl((JSON.parse(banner.attachment! as string) as Base64FileInput), {useBlob: false})} alt="hello" className="w-full h-[300px] object-cover mx-auto" />
+                <Image width={200} height={200} src={banner.attachments?.[0].url} alt="hello" className="w-full h-[300px] object-cover mx-auto" />
               </CardContent>
             </Card>
           )} />

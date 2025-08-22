@@ -1,9 +1,11 @@
+import { includeAttachmentsForEntity, STORAGE_KEYS } from "@/server/services/storage.service";
+import { z } from "zod";
 import {
   createCategorySchema,
   categoryIdSchema,
   updateCategorySchema,
 } from "@/lib/schemas/category";
-import { createTRPCRouter, adminProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, adminProcedure, publicProcedure } from "@/server/api/trpc";
 import {
   createCategory,
   deleteCategory,
@@ -86,6 +88,22 @@ export const categoryRouter = createTRPCRouter({
         });
       }
     }),
+    publicList: publicProcedure
+    .input(paginationFilterSchema.merge(
+      z.object({
+        hideWithoutImages: z.boolean().optional(),
+      })
+    ))
+    .query(({ ctx, input }) => listCategories(ctx.db, input ?? undefined)),
+
+  bySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const category = await ctx.db.category.findUnique({ where: { slug: input.slug } });
+      if (!category) throw new TRPCError({ code: "NOT_FOUND" });
+      const withImgs = await includeAttachmentsForEntity(ctx.db, STORAGE_KEYS.CATEGORY, category);
+      return withImgs;
+    })
 
   // update: adminProcedure
   //   .input(
@@ -98,4 +116,4 @@ export const categoryRouter = createTRPCRouter({
   // delete: adminProcedure
   //   .input(categoryIdSchema)
   //   .mutation(({ input }) => CategoryService.delete(input.id)),
-});
+})

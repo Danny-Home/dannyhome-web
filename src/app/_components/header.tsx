@@ -12,6 +12,7 @@ import React from "react";
 import HeaderCategoryList from "./header-category-list";
 import { auth } from "@/server/auth";
 import Link from "next/link";
+import MiniCart from "./mini-cart";
 
 const Header = async () => {
   const session = await auth();
@@ -40,9 +41,7 @@ const Header = async () => {
               <Button variant="ghost" size="icon">
                 <IconHeart />
               </Button>
-              <Button variant="ghost" size="icon">
-                <IconShoppingCart />
-              </Button>
+              <MiniCart />
               {isAdmin && (
                 <Button variant='soft' asChild className="ml-4">
                 <Link href="/admin">

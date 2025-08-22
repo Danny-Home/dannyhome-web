@@ -159,6 +159,7 @@ export interface Product {
   stockLedgers?: InventoryStock[];
   createdAt: Date;
   updatedAt: Date;
+  CollectionProduct?: CollectionProduct[];
 }
 
 export interface Promotion {
@@ -357,6 +358,29 @@ export interface EventLog {
   payload: JsonValue | null;
   createdAt: Date;
   user?: User | null;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  heroTitle: string | null;
+  heroSubtitle: string | null;
+  active: boolean;
+  products?: CollectionProduct[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CollectionProduct {
+  id: string;
+  collectionId: string;
+  productId: string;
+  position: number;
+  collection?: Collection;
+  product?: Product;
+  createdAt: Date;
 }
 
 type JsonValue = string | number | boolean | { [key in string]?: JsonValue } | Array<JsonValue> | null;

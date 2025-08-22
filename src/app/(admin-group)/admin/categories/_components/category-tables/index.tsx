@@ -7,6 +7,7 @@ import { DataTableToolbar } from "@/components/ui/table/data-table-toolbar";
 import { useDataTable } from "@/hooks/use-data-table";
 import { type ColumnDef } from "@tanstack/react-table";
 import { parseAsInteger, useQueryState } from "nuqs";
+import type { Category } from "prisma/interfaces";
 
 interface CategoryTableParams<TData, TValue> {
   data: TData[];
@@ -27,6 +28,7 @@ export function CategoryTable<TData, TValue>({
     data,
     columns,
     pageCount,
+    getRowId: (row) => row.id,
     shallow: false,
     debounceMs: 500,
   });
