@@ -4,7 +4,7 @@ import {  uploadImageBase64 } from "@/server/cloudinary";
 import type { z } from "zod";
 import { type base64FileInput } from "@/lib/schemas/product";
 import {v2 as cloudinary} from 'cloudinary'
-import type { Attachment } from "prisma/interfaces";
+import type { WithImages } from "@/types/entities";
 
 export type Base64File = z.infer<typeof base64FileInput>;
 
@@ -12,7 +12,7 @@ export async function includeAttachments<T extends { id: string }>(
   prisma: PrismaClient,
   entityType: string,
   entities: T[]
-): Promise<(T & { attachments: any[] })[]> {
+): Promise<WithImages<T>[]> {
   if (entities.length === 0) return [];
 
   const links = await prisma.attachmentEntityLink.findMany({
@@ -39,8 +39,8 @@ export async function includeAttachmentsForEntity<T extends { id: string }>(
   prisma: PrismaClient,
   entityType: string,
   entity: T | null
-): Promise<(T & { attachments: Attachment[] }) | null> {
-  if (!entity) return null;
+): Promise<WithImages<T>> {
+  if (!entity) throw new Error("Entity not found");
 
   const links = await prisma.attachmentEntityLink.findMany({
     where: { entityType, entityId: entity.id },

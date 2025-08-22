@@ -1,17 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Category } from "prisma/interfaces";
+import type { WithImages } from "@/types/entities";
 
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  attachments?: { id: string; url: string }[];
-};
+type Props = {
+  category: WithImages<Category>;
+}
 
-export default function CategoryCard({ category }: { category: Category }) {
-  const img = category.attachments?.[0]?.url ?? "/placeholder.svg";
-
-
+export default function CategoryCard({ category }: Props) {
+  const img = category.attachments?.[0]?.url ?? '/placeholder-image.png';
 
   return (
     <Link href={`/category/${category.slug}`} className="group relative block overflow-hidden rounded-lg">

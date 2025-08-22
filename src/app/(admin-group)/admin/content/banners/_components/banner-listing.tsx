@@ -6,8 +6,6 @@ import type { Banner } from "prisma/interfaces";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
-import { buildViewableUrl } from "@/lib/utils";
-import type { Base64FileInput } from "@/lib/schemas/storage";
 
 type Props = {
   banners: Banner[];
