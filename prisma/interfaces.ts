@@ -84,6 +84,7 @@ export interface User {
   phone: string | null;
   role: Role;
   attachments?: Attachment[];
+  image: string | null;
   accounts?: Account[];
   sessions?: Session[];
   orders?: Order[];
@@ -109,17 +110,6 @@ export interface Category {
   children?: Category[];
   promotions?: Promotion[];
   products?: Product[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface SubCategory {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  metaTitle: string | null;
-  metaDescription: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

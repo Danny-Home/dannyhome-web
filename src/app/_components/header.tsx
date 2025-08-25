@@ -13,11 +13,13 @@ import HeaderCategoryList from "./header-category-list";
 import { auth } from "@/server/auth";
 import Link from "next/link";
 import MiniCart from "./mini-cart";
+import { ThemeSelector } from "@/components/theme-selector";
+import { ModeToggle } from "./ThemeToggle/theme-toggle";
 
 const Header = async () => {
   const session = await auth();
 
-  const isAdmin = session?.user && session.user.role === 'ADMIN';
+  const isAdmin = session?.user && session.user.role === "ADMIN";
 
   return (
     <HydrateClient>
@@ -42,13 +44,14 @@ const Header = async () => {
                 <IconHeart />
               </Button>
               <MiniCart />
+              <ModeToggle />
               {isAdmin && (
-                <Button variant='soft' asChild className="ml-4">
-                <Link href="/admin">
-                <IconLayoutDashboard />
-                  Dashboard
-                </Link>
-              </Button>
+                <Button variant="soft" asChild className="ml-4">
+                  <Link href="/admin">
+                    <IconLayoutDashboard />
+                    Dashboard
+                  </Link>
+                </Button>
               )}
             </div>
           </div>

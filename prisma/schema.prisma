@@ -161,6 +161,7 @@ model User {
   role          Role      @default(CUSTOMER)
 
   attachments Attachment[] @relation("UserUploads")
+  image       String?
 
   accounts  Account[]
   sessions  Session[]
@@ -198,17 +199,17 @@ model Category {
   updatedAt DateTime @updatedAt
 }
 
-model SubCategory {
-  id              String   @id @default(cuid())
-  name            String
-  slug            String   @unique
-  description     String?
-  metaTitle       String?
-  metaDescription String?
+// model SubCategory {
+//   id              String   @id @default(cuid())
+//   name            String
+//   slug            String   @unique
+//   description     String?
+//   metaTitle       String?
+//   metaDescription String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
 
 model Product {
   id              String   @id @default(cuid())
