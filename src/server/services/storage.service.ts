@@ -1,9 +1,53 @@
 import type { PrismaClient } from "@prisma/client";
 import { cloudinary, uploadImageBase64 } from "@/server/cloudinary";
 import type { z } from "zod";
-import { base64FileInput } from "@/lib/schemas/product";
+import { type base64FileInput } from "@/lib/schemas/product";
+import { v2 as cloudinary } from "cloudinary";
+import type { WithImages } from "@/types/entities";
 
 export type Base64File = z.infer<typeof base64FileInput>;
+
+export async function includeAttachments<T extends { id: string }>(
+  prisma: PrismaClient,
+  entityType: string,
+  entities: T[],
+): Promise<WithImages<T>[]> {
+  if (entities.length === 0) return [];
+
+  const links = await prisma.attachmentEntityLink.findMany({
+    where: {
+      entityType,
+      entityId: { in: entities.map((e) => e.id) },
+    },
+    include: { attachment: true },
+  });
+
+  const map = new Map<string, T & { attachments: any[] }>(
+    entities.map((e) => [e.id, { ...e, attachments: [] }]),
+  );
+
+  for (const link of links) {
+    const target = map.get(link.entityId);
+    if (target) target.attachments.push(link.attachment);
+  }
+
+  return Array.from(map.values());
+}
+
+export async function includeAttachmentsForEntity<T extends { id: string }>(
+  prisma: PrismaClient,
+  entityType: string,
+  entity: T | null,
+): Promise<WithImages<T>> {
+  if (!entity) throw new Error("Entity not found");
+
+  const links = await prisma.attachmentEntityLink.findMany({
+    where: { entityType, entityId: entity.id },
+    include: { attachment: true },
+  });
+
+  return { ...entity, attachments: links.map((l) => l.attachment) };
+}
 
 /**
  * Uploads multiple base64 images, creates attachments and links them to an entity.
@@ -70,6 +114,8 @@ export async function deleteAttachmentsForEntity(
 export const STORAGE_KEYS = {
   PRODUCT: "Product",
   CATEGORY: "Category",
+  COLLECTION: "Collection",
+  BANNER: "Banner",
 };
 
 /*

@@ -5,6 +5,5 @@ export const paginationFilterSchema = z
     page: z.number().min(1).default(1),
     perPage: z.number().min(1).max(100).default(20),
   })
-  .optional();
 
 export type TPaginationFilter = z.infer<typeof paginationFilterSchema>;

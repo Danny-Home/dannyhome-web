@@ -86,36 +86,6 @@ const CategoryComboxBoxWithAdd = ({ value, onValueChange }: Props) => {
                 <>
                   <CommandEmpty>No categories found.</CommandEmpty>
                   <CommandGroup>
-                    {categories?.map((category) => (
-                      <CommandItem
-                        key={category.id}
-                        value={category.id}
-                        onSelect={(currentValue) => {
-                          onValueChange(
-                            currentValue === value ? "" : currentValue,
-                          );
-                          setOpen(false);
-                        }}
-                      >
-                        {category.name}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline">
-                              {category._count.subcategories}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="">
-                            Sub-categories
-                          </TooltipContent>
-                        </Tooltip>
-                        {value === category.id && (
-                          <CheckIcon size={16} className="ml-auto" />
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandSeparator />
-                  <CommandGroup>
                     <CreateCategoryPopup
                       trigger={
                         <Button
@@ -132,6 +102,37 @@ const CategoryComboxBoxWithAdd = ({ value, onValueChange }: Props) => {
                       }
                     />
                   </CommandGroup>
+                  <CommandGroup>
+                    {categories?.map((category) => (
+                      <CommandItem
+                        key={category.id}
+                        value={category.id}
+                        onSelect={(currentValue) => {
+                          onValueChange(
+                            currentValue === value ? "" : currentValue,
+                          );
+                          setOpen(false);
+                        }}
+                      >
+                        {category.name}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline">
+                              {category._count.products}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="" side="right">
+                            products in this category
+                          </TooltipContent>
+                        </Tooltip>
+                        {value === category.id && (
+                          <CheckIcon size={16} className="ml-auto" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandSeparator />
+
                 </>
               )}
             </CommandList>

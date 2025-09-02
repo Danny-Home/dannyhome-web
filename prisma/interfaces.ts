@@ -84,6 +84,7 @@ export interface User {
   phone: string | null;
   role: Role;
   attachments?: Attachment[];
+  image: string | null;
   accounts?: Account[];
   sessions?: Session[];
   orders?: Order[];
@@ -108,20 +109,6 @@ export interface Category {
   parent?: Category | null;
   children?: Category[];
   promotions?: Promotion[];
-  subcategories?: SubCategory[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface SubCategory {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  metaTitle: string | null;
-  metaDescription: string | null;
-  categoryId: string;
-  category?: Category;
   products?: Product[];
   createdAt: Date;
   updatedAt: Date;
@@ -139,8 +126,8 @@ export interface Product {
   ratingAvg: number;
   ratingCount: number;
   taxable: boolean;
-  subCategoryId: string;
-  subCategory?: SubCategory;
+  categoryId: string;
+  category?: Category;
   promotions?: Promotion[];
   reviews?: ProductReview[];
   wishlistItems?: WishlistItem[];
@@ -149,8 +136,8 @@ export interface Product {
   sku: string;
   barcode: string | null;
   ean: string | null;
-  defaultPrice: Decimal;
-  price: Decimal;
+  defaultPrice: number;
+  price: number;
   stock: number;
   attributes: JsonValue | null;
   weightGrams: number | null;
@@ -162,6 +149,7 @@ export interface Product {
   stockLedgers?: InventoryStock[];
   createdAt: Date;
   updatedAt: Date;
+  CollectionProduct?: CollectionProduct[];
 }
 
 export interface Promotion {
@@ -360,6 +348,29 @@ export interface EventLog {
   payload: JsonValue | null;
   createdAt: Date;
   user?: User | null;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  heroTitle: string | null;
+  heroSubtitle: string | null;
+  active: boolean;
+  products?: CollectionProduct[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CollectionProduct {
+  id: string;
+  collectionId: string;
+  productId: string;
+  position: number;
+  collection?: Collection;
+  product?: Product;
+  createdAt: Date;
 }
 
 type JsonValue = string | number | boolean | { [key in string]?: JsonValue } | Array<JsonValue> | null;

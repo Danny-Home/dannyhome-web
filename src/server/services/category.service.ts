@@ -2,30 +2,77 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { TPaginationFilter } from "@/lib/schemas/filters";
 import type { PrismaClient } from "@prisma/client";
-import { STORAGE_KEYS } from "./storage.service";
+import {
+  addAttachmentsToEntity,
+  deleteAttachmentsForEntity,
+  includeAttachments,
+  includeAttachmentsForEntity,
+  STORAGE_KEYS,
+} from "./storage.service";
+import type {
+  TCategorySchema,
+  TCreateCategorySchema,
+  TUpdateCategorySchema,
+} from "@/lib/schemas/category";
+import { TRPCError } from "@trpc/server";
+import { maybePaginate } from "@/server/services/base.service";
+
+export type TListCategoriesFilter = {
+  hideWithoutImages?: boolean;
+};
 
 export async function listCategories(
   prisma: PrismaClient,
-  { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
+  {
+    hideWithoutImages,
+    ...filter
+  }: TPaginationFilter & TListCategoriesFilter = {
+    ...defaultPagination,
+    showAll: true,
+    hideWithoutImages: false,
+  },
 ) {
-  const categories = await prisma.category.findMany({
-    skip: (page - 1) * perPage,
-    take: perPage,
+  const { items, total, page, perPage, showAll } = await maybePaginate(
+    prisma,
+    prisma.category,
+    filter,
+  );
+
+  const categories = await includeAttachments(
+    prisma,
+    STORAGE_KEYS.CATEGORY,
+    items,
+  );
+
+  const filteredCategories = hideWithoutImages
+    ? categories.filter((c) => c.attachments.length > 0)
+    : categories;
+
+  return { categories: filteredCategories, total, page, perPage, showAll };
+}
+
+export async function getCategoryById(
+  prisma: PrismaClient,
+  filter: TCategorySchema,
+) {
+  const category = await prisma.category.findUnique({
+    where: { id: filter.id },
   });
 
-  const categoryIds = categories.map((c) => c.id);
+  if (!category) return null;
 
-  if (categoryIds.length === 0) {
-    return { products: [], total: 0, page, perPage };
-  }
+  return includeAttachmentsForEntity(prisma, STORAGE_KEYS.CATEGORY, category);
+}
 
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.PRODUCT,
-      entityId: { in: categoryIds },
-    },
-    include: {
-      attachment: true,
+export async function createCategory(
+  prisma: PrismaClient,
+  payload: TCreateCategorySchema,
+) {
+  const { image, ...data } = payload;
+
+  const category = await prisma.category.create({
+    data: {
+      ...data,
     },
   });
 

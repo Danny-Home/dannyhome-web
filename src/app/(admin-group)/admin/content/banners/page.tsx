@@ -33,7 +33,8 @@ async function BannersPage({ params }: Props) {
   //   };
 
   const banners = await trpc.banner.list({
-    type,
+    page: 1,
+    perPage: 10
   });
 
   return (

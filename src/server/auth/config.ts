@@ -13,7 +13,7 @@ import type { User } from "prisma/interfaces";
  */
 declare module "next-auth" {
   interface Session extends DefaultSession {
-    user:  User & DefaultSession["user"];
+    user: User & DefaultSession["user"];
   }
 
   // interface User {
@@ -36,10 +36,10 @@ export const authConfig = {
         params: {
           prompt: "consent",
           access_type: "offline",
-          response_type: "code"
-        }
-      }
-    })
+          response_type: "code",
+        },
+      },
+    }),
     /**
      * ...add more providers here.
      *
@@ -50,6 +50,7 @@ export const authConfig = {
      * @see https://next-auth.js.org/providers/github
      */
   ],
+  debug: true,
   adapter: PrismaAdapter(db),
   callbacks: {
     session: ({ session, user }) => ({

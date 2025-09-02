@@ -21,7 +21,7 @@ function CreateCategoryPopup({ trigger }: Props) {
       height="fit-content"
       showSuccess={false}
       showCloseButton
-      popupClass="-bottom-20"
+      popupClass="-bottom-5 z-50"
       openChild={<CategoryForm onCreate={() => setOpen(false)} />}
     />
   );

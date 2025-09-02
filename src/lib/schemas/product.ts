@@ -13,8 +13,8 @@ export const createProductSchema = z
     slug: z.string(),
     description: z.string().nullable(),
     price: z.number(),
-    stock: z.number().default(0),
-    subCategoryId: z.string().uuid(),
+    stock: z.number().optional(),
+    categoryId : z.string().uuid(),
     sku: z.string(),
     images: z.array(base64FileInput).optional(),
   })

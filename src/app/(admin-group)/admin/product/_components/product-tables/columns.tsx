@@ -1,30 +1,28 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/ui/table/data-table-column-header";
-import { type Product } from "@/constants/data";
 import { type Column, type ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Text, XCircle } from "lucide-react";
-import Image from "next/image";
 import { CellAction } from "./cell-action";
-import { CATEGORY_OPTIONS } from "./options";
+import type { Product } from "prisma/interfaces";
 
 export const columns: ColumnDef<Product>[] = [
-  {
-    accessorKey: "photo_url",
-    header: "IMAGE",
-    cell: ({ row }) => {
-      return (
-        <div className="relative aspect-square">
-          <Image
-            src={row.getValue("photo_url")}
-            alt={row.getValue("name")}
-            fill
-            className="rounded-lg"
-          />
-        </div>
-      );
-    },
-  },
+  // {
+  //   accessorFn: (row) =>
+  //   header: "IMAGE",
+  //   cell: ({ row }) => {
+  //     return (
+  //       <div className="relative aspect-square">
+  //         <Image
+  //           src={row.getValue("photo_url")}
+  //           alt={row.getValue("name")}
+  //           fill
+  //           className="rounded-lg"
+  //         />
+  //       </div>
+  //     );
+  //   },
+  // },
   {
     id: "name",
     accessorKey: "name",
@@ -47,8 +45,8 @@ export const columns: ColumnDef<Product>[] = [
       <DataTableColumnHeader column={column} title="Category" />
     ),
     cell: ({ cell }) => {
-      const status = cell.getValue<Product["category"]>();
-      const Icon = status === "active" ? CheckCircle2 : XCircle;
+      const status = cell.getValue<Product["active"]>();
+      const Icon = status  ? CheckCircle2 : XCircle;
 
       return (
         <Badge variant="outline" className="capitalize">
@@ -58,11 +56,11 @@ export const columns: ColumnDef<Product>[] = [
       );
     },
     enableColumnFilter: true,
-    meta: {
-      label: "categories",
-      variant: "multiSelect",
-      options: CATEGORY_OPTIONS,
-    },
+    // meta: {
+    //   label: "categories",
+    //   variant: "multiSelect",
+    //   options: CATEGORY_OPTIONS,
+    // },
   },
   {
     accessorKey: "price",

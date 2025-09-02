@@ -12,51 +12,32 @@ import {
   deleteAttachmentsForEntity,
   STORAGE_KEYS,
 } from "./storage.service";
-import type { TPaginationFilter } from "@/lib/schemas/filters";
+import {
+  defaultPagination,
+  type TPaginationFilter,
+} from "@/lib/schemas/filters";
+import { maybePaginate } from "@/server/services/base.service";
+import { TRPCError } from "@trpc/server";
 
 export async function listProducts(
   prisma: PrismaClient,
   { page, perPage }: TPaginationFilter = { page: 1, perPage: 20 },
 ) {
-  const products = await prisma.product.findMany({
-    skip: (page - 1) * perPage,
-    take: perPage,
-  });
-
-  const productIds = products.map((p) => p.id);
-
-  if (productIds.length === 0) {
-    return { products: [], total: 0, page, perPage };
-  }
-
-  const attachmentLinks = await prisma.attachmentEntityLink.findMany({
-    where: {
-      entityType: STORAGE_KEYS.PRODUCT,
-      entityId: { in: productIds },
-    },
-    include: {
-      attachment: true,
-    },
-  });
-
-  const productMap = new Map<string, any>(
-    products.map((p) => [p.id, { ...p, attachments: [] }]),
+  const { items, ...meta } = await maybePaginate(
+    prisma,
+    prisma.product,
+    filters,
   );
 
-  for (const link of attachmentLinks) {
-    const product = productMap.get(link.entityId);
-    if (product) {
-      product.attachments.push(link.attachment);
-    }
-  }
-
-  const total = await prisma.product.count();
+  const products = await includeAttachments(
+    prisma,
+    STORAGE_KEYS.PRODUCT,
+    items,
+  );
 
   return {
-    products: Array.from(productMap.values()),
-    total,
-    page,
-    perPage,
+    ...meta,
+    products,
   };
 }
 
@@ -118,6 +99,13 @@ export async function updateProduct(
     },
   });
 
+  if (!product) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Product not found",
+    });
+  }
+
   if (images?.length) {
     await deleteAttachmentsForEntity(prisma, STORAGE_KEYS.PRODUCT, product.id);
     await addAttachmentsToEntity(prisma, images, "Product", product.id);
@@ -131,4 +119,64 @@ export async function deleteProduct(prisma: PrismaClient, { id }: TProductId) {
   const product = await prisma.product.delete({ where: { id } });
 
   return product;
+}
+
+export async function searchProducts(prisma: PrismaClient, input: any) {
+  const page = input?.page ?? 1;
+  const perPage = input?.perPage ?? 24;
+
+  const where: any = { active: true };
+
+  if (input?.q) {
+    where.OR = [
+      { name: { contains: input.q, mode: "insensitive" } },
+      { description: { contains: input.q, mode: "insensitive" } },
+    ];
+  }
+  if (Array.isArray(input?.categoryIds) && input.categoryIds.length) {
+    where.categoryId = { in: input.categoryIds };
+  }
+  if (
+    typeof input?.minPrice === "number" ||
+    typeof input?.maxPrice === "number"
+  ) {
+    where.price = {};
+    if (typeof input.minPrice === "number") where.price.gte = input.minPrice;
+    if (typeof input.maxPrice === "number") where.price.lte = input.maxPrice;
+  }
+  if (input?.inStock) {
+    where.stock = { gt: 0 };
+  }
+
+  let orderBy: any = { createdAt: "desc" };
+  switch (input?.sort) {
+    case "priceAsc":
+      orderBy = { price: "asc" };
+      break;
+    case "priceDesc":
+      orderBy = { price: "desc" };
+      break;
+    case "rating":
+      orderBy = [{ ratingAvg: "desc" }, { ratingCount: "desc" }];
+      break;
+    case "newest":
+    default:
+      orderBy = { createdAt: "desc" };
+  }
+
+  const { items, total } = await maybePaginate(prisma, prisma.product, {
+    page,
+    perPage,
+    showAll: false,
+    where,
+    orderBy,
+  });
+
+  const products = await includeAttachments(
+    prisma,
+    STORAGE_KEYS.PRODUCT,
+    items,
+  );
+
+  return { products, page, perPage, total };
 }

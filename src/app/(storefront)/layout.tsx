@@ -1,15 +1,16 @@
-import Header from '@/app/_components/header'
-import React, { type PropsWithChildren } from 'react'
+import type { ReactNode } from "react";
+import Header from "@/app/_components/header";
+import Footer from "./_components/footer";
 
-type Props = {}
-
-function StoreFrontLayout({ children }: Props & PropsWithChildren) {
+export default function StorefrontLayout({ children }: { children: ReactNode }) {
   return (
-    <>
+    <div className="min-h-dvh flex flex-col">
+      {/* Header */}
       <Header />
-      {children}
-    </>
-  )
+      {/* Main */}
+      <main className="flex-1">{children}</main>
+      {/* Footer */}
+      <Footer />
+    </div>
+  );
 }
-
-export default StoreFrontLayout
